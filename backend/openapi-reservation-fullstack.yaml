@@ -1,0 +1,1276 @@
+openapi: 3.0.3
+info:
+  title: API Réservation de ressources
+  version: 2.0.0
+  description: >
+    Contrat Frontend/Backend pour une plateforme de réservation en ligne sécurisée.
+  contact:
+    name: Yuliia Kolomiiets
+servers:
+  - url: /api
+    description: Serveur API
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Gestion de l'authentification et des sessions
+  - name: Users
+    description: Gestion des profils utilisateurs
+  - name: Resources
+    description: Gestion des ressources réservables
+  - name: Availability
+    description: Consultation des disponibilités
+  - name: Reservations
+    description: Gestion des réservations utilisateur
+  - name: Admin
+    description: Fonctionnalités administrateur (toutes réservations, statistiques)
+
+paths:
+  # ===== AUTHENTICATION & USERS =====
+  
+  /auth/session:
+    get:
+      tags: [Authentication]
+      operationId: getCurrentSession
+      summary: Récupérer la session utilisateur courante
+      description: >
+        Retourne les informations de l'utilisateur connecté.
+        Utilisé pour récupérer automatiquement le profil au chargement de l'application.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Session active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /users/me:
+    get:
+      tags: [Users]
+      operationId: getMyProfile
+      summary: Consulter mon profil utilisateur
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    patch:
+      tags: [Users]
+      operationId: updateMyProfile
+      summary: Mettre à jour mon profil
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    delete:
+      tags: [Users]
+      operationId: deleteMyAccount
+      summary: Supprimer mon compte utilisateur
+      description: >
+        Supprime le compte de l'utilisateur connecté.
+        Envoie une notification email de confirmation de suppression.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Compte supprimé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Compte supprimé avec succès"
+                  emailSent:
+                    type: boolean
+                    description: Indique si l'email de confirmation a été envoyé
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ===== RESOURCES =====
+  
+  /resources:
+    get:
+      tags: [Resources]
+      operationId: listResources
+      summary: Lister les ressources disponibles
+      description: >
+        Retourne la liste paginée des ressources correspondant aux filtres.
+        La liste peut être vide (cas normal).
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/start"
+        - $ref: "#/components/parameters/end"
+        - $ref: "#/components/parameters/capacity"
+        - $ref: "#/components/parameters/location"
+        - $ref: "#/components/parameters/amenities"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Succès (liste possiblement vide)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResources"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    post:
+      tags: [Resources]
+      operationId: createResource
+      summary: Créer une nouvelle ressource (admin uniquement)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceRequest"
+      responses:
+        "201":
+          description: Ressource créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /resources/{id}:
+    get:
+      tags: [Resources]
+      operationId: getResource
+      summary: Récupérer le détail d'une ressource
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/resourceId"
+      responses:
+        "200":
+          description: Succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    patch:
+      tags: [Resources]
+      operationId: updateResource
+      summary: Modifier une ressource (admin uniquement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/resourceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResourceRequest"
+      responses:
+        "200":
+          description: Ressource modifiée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    delete:
+      tags: [Resources]
+      operationId: deleteResource
+      summary: Supprimer/désactiver une ressource (admin uniquement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/resourceId"
+      responses:
+        "200":
+          description: Ressource supprimée/désactivée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Ressource désactivée avec succès"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /resources/{id}/availability:
+    get:
+      tags: [Availability]
+      operationId: getResourceAvailability
+      summary: Accéder aux disponibilités d'une ressource
+      description: >
+        Retourne une liste de créneaux entre start et end, indiquant s'ils sont disponibles.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/resourceId"
+        - $ref: "#/components/parameters/start"
+        - $ref: "#/components/parameters/end"
+        - $ref: "#/components/parameters/stepMinutes"
+      responses:
+        "200":
+          description: Succès (slots peut être vide)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ===== RESERVATIONS (USER) =====
+  
+  /reservations:
+    get:
+      tags: [Reservations]
+      operationId: listMyReservations
+      summary: Consulter mes réservations
+      description: >
+        Retourne la liste paginée des réservations de l'utilisateur connecté.
+        Permet de filtrer par statut et période.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/from"
+        - $ref: "#/components/parameters/to"
+        - $ref: "#/components/parameters/status"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Succès (liste possiblement vide)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedReservations"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    post:
+      tags: [Reservations]
+      operationId: createReservation
+      summary: Réserver une ressource sur un créneau précis
+      description: >
+        Tente de créer une réservation. Le backend peut refuser pour des raisons métier :
+        créneau indisponible, règles de durée, conflit, etc.
+        En cas de succès : envoie automatiquement un email de confirmation à l'utilisateur
+        et un email de notification à l'administrateur.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReservationRequest"
+      responses:
+        "201":
+          description: Réservation créée (contient le numéro de réservation)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationCreatedResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/ConflictSlotNotAvailable"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /reservations/history:
+    get:
+      tags: [Reservations]
+      operationId: getMyReservationHistory
+      summary: Consulter l'historique de mes réservations
+      description: >
+        Retourne toutes les réservations passées de l'utilisateur (statut passé).
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Historique des réservations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedReservations"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /reservations/{id}:
+    get:
+      tags: [Reservations]
+      operationId: getReservation
+      summary: Obtenir une réservation par numéro
+      description: >
+        Retourne la réservation correspondant au numéro (id). Permet d'afficher une page de confirmation.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/reservationId"
+      responses:
+        "200":
+          description: Succès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    patch:
+      tags: [Reservations]
+      operationId: updateReservation
+      summary: Modifier une réservation
+      description: >
+        Modifie certains champs d'une réservation (ex: créneau). 
+        Le backend peut refuser si le nouveau créneau est indisponible ou si la réservation n'est pas modifiable.
+        En cas de succès : envoie automatiquement un email de modification à l'utilisateur.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/reservationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReservationRequest"
+      responses:
+        "200":
+          description: Réservation modifiée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationUpdateResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ConflictSlotNotAvailable"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    delete:
+      tags: [Reservations]
+      operationId: cancelReservation
+      summary: Annuler une réservation
+      description: >
+        Annule une réservation. Peut échouer si l'annulation n'est pas autorisée (ex: délai dépassé).
+        En cas de succès : envoie automatiquement un email d'annulation à l'utilisateur
+        et un email de notification à l'administrateur.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/reservationId"
+      responses:
+        "200":
+          description: Réservation annulée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationCancelResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # ===== ADMIN =====
+  
+  /admin/reservations:
+    get:
+      tags: [Admin]
+      operationId: listAllReservations
+      summary: Lister toutes les réservations (admin uniquement)
+      description: >
+        Retourne toutes les réservations de tous les utilisateurs.
+        Permet de filtrer par statut, période, ressource, utilisateur.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/from"
+        - $ref: "#/components/parameters/to"
+        - $ref: "#/components/parameters/status"
+        - name: resourceId
+          in: query
+          required: false
+          description: Filtrer par ressource
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: false
+          description: Filtrer par utilisateur
+          schema:
+            type: string
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Liste de toutes les réservations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedReservations"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /admin/reservations/{id}:
+    patch:
+      tags: [Admin]
+      operationId: adminUpdateReservation
+      summary: Modifier une réservation (admin uniquement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/reservationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReservationRequest"
+      responses:
+        "200":
+          description: Réservation modifiée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationUpdateResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    
+    delete:
+      tags: [Admin]
+      operationId: adminCancelReservation
+      summary: Annuler une réservation (admin uniquement)
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/reservationId"
+      responses:
+        "200":
+          description: Réservation annulée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationCancelResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /admin/statistics:
+    get:
+      tags: [Admin]
+      operationId: getStatistics
+      summary: Accéder aux statistiques globales (admin uniquement)
+      description: >
+        Retourne des statistiques sur l'utilisation de la plateforme :
+        nombre de réservations, taux d'occupation, ressources les plus populaires, etc.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Période de début pour les statistiques
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Période de fin pour les statistiques
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Statistiques globales
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Statistics"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT fourni par Clerk
+
+  parameters:
+    resourceId:
+      name: id
+      in: path
+      required: true
+      description: Identifiant de la ressource
+      schema:
+        type: string
+        example: resource_123
+
+    reservationId:
+      name: id
+      in: path
+      required: true
+      description: Numéro de réservation (identifiant)
+      schema:
+        type: string
+        example: res_789
+
+    start:
+      name: start
+      in: query
+      required: true
+      description: Début du créneau (ISO 8601)
+      schema:
+        type: string
+        format: date-time
+        example: "2026-01-19T09:00:00Z"
+
+    end:
+      name: end
+      in: query
+      required: true
+      description: Fin du créneau (ISO 8601)
+      schema:
+        type: string
+        format: date-time
+        example: "2026-01-19T10:00:00Z"
+
+    from:
+      name: from
+      in: query
+      required: false
+      description: Filtre période (début). Si absent, pas de filtre.
+      schema:
+        type: string
+        format: date-time
+        example: "2026-01-01T00:00:00Z"
+
+    to:
+      name: to
+      in: query
+      required: false
+      description: Filtre période (fin). Si absent, pas de filtre.
+      schema:
+        type: string
+        format: date-time
+        example: "2026-02-01T00:00:00Z"
+
+    status:
+      name: status
+      in: query
+      required: false
+      description: Filtrer par statut de réservation
+      schema:
+        type: string
+        enum: [active, modified, cancelled, passed]
+
+    capacity:
+      name: capacity
+      in: query
+      required: false
+      description: Capacité minimale (nombre de personnes)
+      schema:
+        type: integer
+        minimum: 1
+        example: 6
+
+    location:
+      name: location
+      in: query
+      required: false
+      description: Filtre par localisation (texte libre)
+      schema:
+        type: string
+        example: "Paris 10"
+
+    amenities:
+      name: amenities
+      in: query
+      required: false
+      description: Filtre équipements sous forme CSV (ex wifi,ecran)
+      schema:
+        type: string
+        example: "wifi,ecran"
+
+    page:
+      name: page
+      in: query
+      required: false
+      description: Numéro de page (indexé à 1)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    pageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: Taille de page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+
+    stepMinutes:
+      name: stepMinutes
+      in: query
+      required: false
+      description: Granularité des créneaux en minutes
+      schema:
+        type: integer
+        minimum: 5
+        maximum: 240
+        default: 30
+
+  responses:
+    Unauthorized:
+      description: Non authentifié - token manquant ou invalide
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Token d'authentification manquant ou invalide"
+
+    Forbidden:
+      description: Accès interdit - permissions insuffisantes
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "Vous n'avez pas les permissions nécessaires pour cette action"
+
+    BadRequest:
+      description: Paramètres ou données invalides
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    ConflictSlotNotAvailable:
+      description: Refus métier — créneau indisponible
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    UnprocessableEntity:
+      description: Refus métier — règles non respectées (ex. durée min/max, trop tard pour modifier, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+    InternalServerError:
+      description: Erreur technique
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    # ===== USER & AUTHENTICATION =====
+    
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, fullName, role, createdAt]
+      properties:
+        id:
+          type: string
+          description: Identifiant unique de l'utilisateur
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+          description: Rôle de l'utilisateur
+        phone:
+          type: string
+          nullable: true
+        twoFactorEnabled:
+          type: boolean
+          description: Indique si la 2FA est activée
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserSession:
+      type: object
+      additionalProperties: false
+      required: [user, sessionId, expiresAt]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        sessionId:
+          type: string
+          description: Identifiant de session
+        expiresAt:
+          type: string
+          format: date-time
+          description: Date d'expiration de la session
+
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        twoFactorEnabled:
+          type: boolean
+
+    # ===== RESOURCES =====
+    
+    Resource:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, active, availability, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: Capacité maximale (optionnel)
+        location:
+          type: string
+          nullable: true
+        amenities:
+          type: array
+          items:
+            type: string
+          default: []
+        pricePerHour:
+          type: number
+          minimum: 0
+          nullable: true
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          default: []
+        active:
+          type: boolean
+          description: Indique si la ressource est activée/disponible
+        availability:
+          type: object
+          description: Règles de disponibilité (jours/horaires)
+          properties:
+            daysOfWeek:
+              type: array
+              items:
+                type: integer
+                minimum: 0
+                maximum: 6
+              description: Jours de la semaine (0=dimanche, 6=samedi)
+            timeRanges:
+              type: array
+              items:
+                type: object
+                properties:
+                  start:
+                    type: string
+                    pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                    example: "09:00"
+                  end:
+                    type: string
+                    pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+                    example: "18:00"
+        rules:
+          type: object
+          description: Règles spécifiques
+          properties:
+            minDurationMinutes:
+              type: integer
+              minimum: 1
+            maxDurationMinutes:
+              type: integer
+              minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PaginatedResources:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Resource"
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+    CreateResourceRequest:
+      type: object
+      additionalProperties: false
+      required: [name, description]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        location:
+          type: string
+        amenities:
+          type: array
+          items:
+            type: string
+        pricePerHour:
+          type: number
+          minimum: 0
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        availability:
+          type: object
+          description: Règles de disponibilité
+        rules:
+          type: object
+          description: Règles spécifiques
+
+    UpdateResourceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+        location:
+          type: string
+        amenities:
+          type: array
+          items:
+            type: string
+        pricePerHour:
+          type: number
+          minimum: 0
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        active:
+          type: boolean
+        availability:
+          type: object
+        rules:
+          type: object
+
+    # ===== AVAILABILITY =====
+    
+    AvailabilitySlot:
+      type: object
+      additionalProperties: false
+      required: [start, end, available]
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        available:
+          type: boolean
+
+    AvailabilityResponse:
+      type: object
+      additionalProperties: false
+      required: [resourceId, slots]
+      properties:
+        resourceId:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/AvailabilitySlot"
+
+    # ===== RESERVATIONS =====
+    
+    CreateReservationRequest:
+      type: object
+      additionalProperties: false
+      required: [resourceId, start, end]
+      properties:
+        resourceId:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+          description: Notes optionnelles
+
+    UpdateReservationRequest:
+      type: object
+      additionalProperties: false
+      description: Champs modifiables
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        notes:
+          type: string
+
+    Reservation:
+      type: object
+      additionalProperties: false
+      required: [id, resourceId, userId, start, end, status, createdAt]
+      properties:
+        id:
+          type: string
+          description: Numéro de réservation
+        resourceId:
+          type: string
+        userId:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, modified, cancelled, passed]
+          description: Statut de la réservation
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        resource:
+          $ref: "#/components/schemas/Resource"
+          description: Détails de la ressource (optionnel, inclus si nécessaire)
+
+    PaginatedReservations:
+      type: object
+      additionalProperties: false
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reservation"
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+
+    # ===== EMAIL NOTIFICATIONS =====
+    
+    EmailNotification:
+      type: object
+      additionalProperties: false
+      required: [type, status]
+      properties:
+        type:
+          type: string
+          enum: [reservation_created, reservation_updated, reservation_cancelled, reservation_reminder, account_deleted, admin_notification]
+          description: Type d'email envoyé
+        status:
+          type: string
+          enum: [sent, failed, pending]
+          description: Statut de l'envoi
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+        recipient:
+          type: string
+          format: email
+        errorMessage:
+          type: string
+          nullable: true
+          description: Message d'erreur si l'envoi a échoué
+
+    ReservationCreatedResult:
+      type: object
+      additionalProperties: false
+      required: [reservation, emailNotifications]
+      properties:
+        reservation:
+          $ref: "#/components/schemas/Reservation"
+        emailNotifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailNotification"
+          description: Statut des emails envoyés (utilisateur + admin)
+
+    ReservationUpdateResult:
+      type: object
+      additionalProperties: false
+      required: [reservation, emailNotifications]
+      properties:
+        reservation:
+          $ref: "#/components/schemas/Reservation"
+        emailNotifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailNotification"
+
+    ReservationCancelResult:
+      type: object
+      additionalProperties: false
+      required: [reservation, emailNotifications]
+      properties:
+        reservation:
+          $ref: "#/components/schemas/Reservation"
+        emailNotifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmailNotification"
+
+    # ===== STATISTICS =====
+    
+    Statistics:
+      type: object
+      additionalProperties: false
+      properties:
+        totalReservations:
+          type: integer
+          description: Nombre total de réservations
+        activeReservations:
+          type: integer
+          description: Réservations actives
+        cancelledReservations:
+          type: integer
+          description: Réservations annulées
+        totalUsers:
+          type: integer
+          description: Nombre total d'utilisateurs
+        totalResources:
+          type: integer
+          description: Nombre total de ressources
+        occupancyRate:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Taux d'occupation en pourcentage
+        popularResources:
+          type: array
+          items:
+            type: object
+            properties:
+              resourceId:
+                type: string
+              name:
+                type: string
+              reservationCount:
+                type: integer
+
+    # ===== ERROR =====
+    
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              default: {}
