@@ -1,0 +1,28 @@
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.empty-state__icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state__title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.empty-state__message {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.empty-state__action-btn {
+  margin-top: 1rem;
+}
