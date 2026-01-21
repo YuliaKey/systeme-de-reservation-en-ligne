@@ -1,5 +1,6 @@
 import { Response } from "express";
-import { getClerkUser } from "../config/clerk.js";
+import { getAuth } from "@clerk/express";
+import { clerkClient } from "../config/clerk.js";
 import { AuthenticatedRequest } from "../types/index.js";
 
 /**
@@ -15,14 +16,17 @@ export class AuthController {
     res: Response,
   ): Promise<void> {
     try {
-      const clerkUser = await getClerkUser(req.userId!);
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
+      const clerkUser = await clerkClient.users.getUser(userId);
 
       res.json({
         userId: clerkUser.id,
         email: clerkUser.emailAddresses[0]?.emailAddress || "",
         fullName:
           `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
-        role: req.userRole,
+        role: (clerkUser.publicMetadata?.role as string) || "user",
         createdAt: new Date(clerkUser.createdAt),
       });
     } catch (error) {

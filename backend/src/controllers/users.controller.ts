@@ -1,6 +1,7 @@
 import { Response } from "express";
+import { getAuth } from "@clerk/express";
 import { pool } from "../config/database.js";
-import { clerk, getClerkUser } from "../config/clerk.js";
+import { clerkClient } from "../config/clerk.js";
 import { EmailService } from "../services/email.service.js";
 import {
   AuthenticatedRequest,
@@ -22,15 +23,18 @@ export class UsersController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       // Vérifier si l'utilisateur existe en DB, sinon le créer
       let userResult = await pool.query<User>(
         "SELECT * FROM users WHERE clerk_id = $1",
-        [req.userId],
+        [userId],
       );
 
       if (userResult.rows.length === 0) {
         // Créer l'utilisateur à partir des infos Clerk
-        const clerkUser = await getClerkUser(req.userId!);
+        const clerkUser = await clerkClient.users.getUser(userId);
         const email = clerkUser.emailAddresses[0]?.emailAddress || "";
         const fullName =
           `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim();
@@ -38,12 +42,12 @@ export class UsersController {
         await pool.query(
           `INSERT INTO users (clerk_id, email, full_name) 
            VALUES ($1, $2, $3)`,
-          [req.userId, email, fullName],
+          [userId, email, fullName],
         );
 
         userResult = await pool.query<User>(
           "SELECT * FROM users WHERE clerk_id = $1",
-          [req.userId],
+          [userId],
         );
       }
 
@@ -91,7 +95,10 @@ export class UsersController {
         return await UsersController.getMyProfile(req, res);
       }
 
-      values.push(req.userId);
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
+      values.push(userId);
       const result = await pool.query<User>(
         `UPDATE users 
          SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
@@ -110,7 +117,7 @@ export class UsersController {
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
 
-        await clerk.users.updateUser(req.userId!, {
+        await clerkClient.users.updateUser(userId, {
           firstName,
           lastName,
         });
@@ -135,11 +142,14 @@ export class UsersController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+      
       // Vérifier qu'il n'y a pas de réservations actives
       const activeReservations = await pool.query(
         `SELECT COUNT(*) as count FROM reservations 
          WHERE user_id = $1 AND status = 'active' AND end_time > NOW()`,
-        [req.userId],
+        [userId],
       );
 
       if (parseInt(activeReservations.rows[0].count) > 0) {
@@ -151,7 +161,7 @@ export class UsersController {
       // Récupérer l'utilisateur avant suppression (pour l'email)
       const userResult = await pool.query<User>(
         "SELECT * FROM users WHERE clerk_id = $1",
-        [req.userId],
+        [userId],
       );
 
       if (userResult.rows.length === 0) {
@@ -161,10 +171,10 @@ export class UsersController {
       const user = userResult.rows[0];
 
       // Supprimer d'abord dans la DB (cascade sur réservations et notifications)
-      await pool.query("DELETE FROM users WHERE clerk_id = $1", [req.userId]);
+      await pool.query("DELETE FROM users WHERE clerk_id = $1", [userId]);
 
       // Ensuite supprimer de Clerk
-      await clerk.users.deleteUser(req.userId!);
+      await clerkClient.users.deleteUser(userId);
 
       // Envoyer l'email de confirmation (sans await)
       EmailService.sendAccountDeletedEmail(user).catch((error) =>

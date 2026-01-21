@@ -1,4 +1,6 @@
 import { Response } from "express";
+import { getAuth } from "@clerk/express";
+import { clerkClient } from "../config/clerk.js";
 import { ReservationService } from "../services/reservation.service.js";
 import {
   AuthenticatedRequest,
@@ -20,12 +22,15 @@ export class ReservationsController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       const query = req.query as unknown as ReservationQueryParams;
       const limit = query.limit ? parseInt(query.limit as string) : 50;
       const offset = query.offset ? parseInt(query.offset as string) : 0;
 
       const result = await ReservationService.getAllReservations(
-        req.userId, // Filtrer par utilisateur connecté
+        userId, // Filtrer par utilisateur connecté
         query.resourceId,
         query.status,
         query.startDate ? new Date(query.startDate as string) : undefined,
@@ -58,6 +63,9 @@ export class ReservationsController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       const query = req.query as unknown as ReservationQueryParams;
       const limit = query.limit ? parseInt(query.limit as string) : 50;
       const offset = query.offset ? parseInt(query.offset as string) : 0;
@@ -65,7 +73,7 @@ export class ReservationsController {
         query.includeActive === "true" || query.includeActive === true;
 
       const result = await ReservationService.getUserReservationHistory(
-        req.userId!,
+        userId,
         includeActive,
         limit,
         offset,
@@ -95,9 +103,12 @@ export class ReservationsController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       const reservation = await ReservationService.getReservationById(
         req.params.id,
-        req.userId, // Filtrer par utilisateur connecté
+        userId, // Filtrer par utilisateur connecté
       );
       res.json(reservation);
     } catch (error) {
@@ -132,8 +143,11 @@ export class ReservationsController {
   ): Promise<void> {
     try {
       const data: CreateReservationRequest = req.body;
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       const reservation = await ReservationService.createReservation(
-        req.userId!,
+        userId,
         data,
       );
       res.status(201).json(reservation);
@@ -173,11 +187,17 @@ export class ReservationsController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
       const data: UpdateReservationRequest = req.body;
+      const user = await clerkClient.users.getUser(userId);
+      const isAdmin = user.publicMetadata?.role === "admin";
+
       const reservation = await ReservationService.updateReservation(
         req.params.id,
-        req.userId!,
-        req.userRole === "admin",
+        userId,
+        isAdmin,
         data,
       );
       res.json(reservation);
@@ -228,10 +248,16 @@ export class ReservationsController {
     res: Response,
   ): Promise<void> {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) throw new Error("Non authentifié");
+
+      const user = await clerkClient.users.getUser(userId);
+      const isAdmin = user.publicMetadata?.role === "admin";
+
       const reservation = await ReservationService.cancelReservation(
         req.params.id,
-        req.userId!,
-        req.userRole === "admin",
+        userId,
+        isAdmin,
       );
       res.json(reservation);
     } catch (error) {

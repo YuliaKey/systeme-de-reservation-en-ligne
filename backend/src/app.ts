@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import { clerkMiddleware } from "@clerk/express";
 import { config } from "./config/index.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -31,6 +32,8 @@ if (config.env === "development") {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(clerkMiddleware());
 
 // Health check
 app.get("/health", (_req: Request, res: Response) => {
