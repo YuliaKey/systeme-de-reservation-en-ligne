@@ -111,41 +111,60 @@ backend/
 
 ### Authentification
 
-- `POST /api/auth/register` - Créer un nouveau compte utilisateur
-- `POST /api/auth/login` - Se connecter (magic link via Clerk)
-- `POST /api/auth/logout` - Se déconnecter
-- `GET /api/auth/me` - Récupérer les informations de l'utilisateur connecté
+**Note:** Inscription/Connexion/Déconnexion gérées par Clerk côté frontend
+
+- `GET /api/auth/session` - Récupérer les informations de session (requiert authentification)
 
 ### Utilisateurs
 
-- `GET /api/users/:id` - Récupérer un profil utilisateur
-- `PUT /api/users/:id` - Mettre à jour son profil
-- `DELETE /api/users/:id` - Supprimer son compte
+- `GET /api/users/me` - Récupérer son profil (requiert authentification)
+- `PUT /api/users/me` - Mettre à jour son profil (requiert authentification)
+- `DELETE /api/users/me` - Supprimer son compte (requiert authentification)
 
 ### Ressources (Salles/Espaces)
 
 - `GET /api/resources` - Lister toutes les ressources disponibles
 - `GET /api/resources/:id` - Récupérer les détails d'une ressource
+- `GET /api/resources/:id/availability` - Vérifier les disponibilités d'une ressource
 - `POST /api/resources` - Créer une ressource (admin uniquement)
 - `PUT /api/resources/:id` - Modifier une ressource (admin uniquement)
 - `DELETE /api/resources/:id` - Supprimer une ressource (admin uniquement)
-- `GET /api/resources/:id/availability` - Vérifier les disponibilités d'une ressource
 
 ### Réservations
 
-- `GET /api/reservations` - Lister ses réservations
-- `GET /api/reservations/:id` - Récupérer les détails d'une réservation
-- `POST /api/reservations` - Créer une réservation
-- `PUT /api/reservations/:id` - Modifier une réservation
-- `DELETE /api/reservations/:id` - Annuler une réservation
+- `GET /api/reservations` - Lister ses réservations (requiert authentification)
+- `GET /api/reservations/history` - Récupérer son historique (requiert authentification)
+- `GET /api/reservations/:id` - Récupérer les détails d'une réservation (requiert authentification)
+- `POST /api/reservations` - Créer une réservation (requiert authentification)
+- `PUT /api/reservations/:id` - Modifier une réservation (requiert authentification)
+- `DELETE /api/reservations/:id` - Annuler une réservation (requiert authentification)
 
 ### Administration
 
-- `GET /api/admin/reservations` - Lister toutes les réservations (admin)
-- `PUT /api/admin/reservations/:id/status` - Modifier le statut d'une réservation (admin)
-- `POST /api/admin/test-email` - Tester l'envoi d'emails (admin)
-- `GET /api/admin/email-logs` - Consulter les logs d'emails (admin)
-- `POST /api/admin/maintenance/update-past-reservations` - Mise à jour des réservations passées (admin)
+- `GET /api/admin/reservations` - Lister toutes les réservations (admin uniquement)
+- `GET /api/admin/reservations/:id` - Récupérer une réservation spécifique (admin uniquement)
+- `DELETE /api/admin/reservations/:id` - Supprimer définitivement une réservation (admin uniquement)
+- `GET /api/admin/statistics` - Récupérer les statistiques globales (admin uniquement)
+- `POST /api/admin/test-email` - Tester l'envoi d'emails (admin uniquement)
+- `GET /api/admin/email-logs` - Consulter les logs d'emails (admin uniquement)
+- `POST /api/admin/maintenance/update-past-reservations` - Mise à jour des réservations passées (admin uniquement)
+
+## Tester l'authentification sans frontend
+
+### Option 1 : Page HTML de test (Recommandé)
+
+1. Ouvrir `test-auth.html` dans un navigateur
+2. Remplacer `pk_test_YOUR_KEY_HERE` par votre clé publique Clerk
+3. Se connecter avec le composant Clerk
+4. Copier le token JWT et tester les endpoints
+
+### Option 2 : Via Clerk Dashboard
+
+1. Aller dans Clerk Dashboard → Users → Votre utilisateur
+2. Cliquer "Sign in as user"
+3. Ouvrir DevTools Console
+4. Taper : `await window.Clerk.session.getToken()`
+5. Copier le token dans `tests/requests/api.http`
 
 ## Tests avec RestClient
 
