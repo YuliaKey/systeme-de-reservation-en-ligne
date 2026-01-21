@@ -620,6 +620,175 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /admin/test-email:
+    post:
+      tags: [Admin]
+      operationId: sendTestEmail
+      summary: Envoyer un email de test (admin uniquement)
+      description: >
+        Permet de tester la configuration SMTP en envoyant un email de test
+        à l'adresse spécifiée. Utile pour vérifier que les emails fonctionnent
+        correctement en environnement de développement ou après un changement de configuration.
+        Supporte le système de retry automatique (3 tentatives par défaut).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Adresse email du destinataire du test
+                  example: test@example.com
+      responses:
+        "200":
+          description: Email de test envoyé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Email de test envoyé à test@example.com
+                  messageId:
+                    type: string
+                    description: ID du message email
+                  attempts:
+                    type: integer
+                    description: Nombre de tentatives nécessaires
+                    example: 1
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          description: Échec de l'envoi d'email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Email Send Failed
+                  message:
+                    type: string
+                    example: Échec de l'envoi après 3 tentative(s)
+                  details:
+                    type: string
+                    description: Détails de l'erreur SMTP
+
+  /admin/email-logs:
+    get:
+      tags: [Admin]
+      operationId: getEmailLogs
+      summary: Consulter les logs d'envoi d'emails (admin uniquement)
+      description: >
+        Récupère l'historique de tous les emails envoyés par le système
+        avec leur statut (sent, failed, pending), le type d'email,
+        le destinataire et les éventuelles erreurs. Permet de debugger
+        les problèmes d'envoi et d'assurer la traçabilité des notifications.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filtrer par statut d'envoi
+          schema:
+            type: string
+            enum: [sent, failed, pending]
+            example: failed
+        - name: limit
+          in: query
+          required: false
+          description: Nombre maximum de résultats
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Décalage pour la pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Liste des logs d'emails
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/EmailLog"
+                  total:
+                    type: integer
+                    description: Nombre total de logs
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /admin/maintenance/update-past-reservations:
+    post:
+      tags: [Admin]
+      operationId: updatePastReservations
+      summary: Marquer les réservations passées (maintenance)
+      description: >
+        Tâche de maintenance qui met à jour automatiquement le statut des réservations
+        dont la date de fin est dépassée. Change le statut de 'active' ou 'modified'
+        vers 'passed'. Cette route peut être appelée manuellement ou via un cron job.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Réservations mises à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 5 réservation(s) marquée(s) comme passée(s)
+                  count:
+                    type: integer
+                    description: Nombre de réservations mises à jour
+                    example: 5
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1179,6 +1348,48 @@ components:
           type: string
           nullable: true
           description: Message d'erreur si l'envoi a échoué
+
+    EmailLog:
+      type: object
+      additionalProperties: false
+      required: [id, type, recipient, status, createdAt]
+      description: Log complet d'un email envoyé par le système
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant unique du log
+        reservationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID de la réservation associée (null pour account_deleted)
+        type:
+          type: string
+          enum: [reservation_created, reservation_updated, reservation_cancelled, reservation_reminder, account_deleted, admin_notification]
+          description: Type d'email
+        recipient:
+          type: string
+          format: email
+          description: Adresse email du destinataire
+        status:
+          type: string
+          enum: [sent, failed, pending]
+          description: Statut de l'envoi
+        errorMessage:
+          type: string
+          nullable: true
+          description: Détails de l'erreur (inclut le nombre de tentatives)
+          example: "Connection timeout (après 3 tentative(s))"
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date et heure d'envoi réussi
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création du log
 
     ReservationCreatedResult:
       type: object

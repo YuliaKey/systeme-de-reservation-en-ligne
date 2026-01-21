@@ -107,6 +107,46 @@ backend/
 - `npm run db:seed` - Insère les données de test
 - `npm run type-check` - Vérifie les types TypeScript sans compiler
 
+## Endpoints disponibles
+
+### Authentification
+
+- `POST /api/auth/register` - Créer un nouveau compte utilisateur
+- `POST /api/auth/login` - Se connecter (magic link via Clerk)
+- `POST /api/auth/logout` - Se déconnecter
+- `GET /api/auth/me` - Récupérer les informations de l'utilisateur connecté
+
+### Utilisateurs
+
+- `GET /api/users/:id` - Récupérer un profil utilisateur
+- `PUT /api/users/:id` - Mettre à jour son profil
+- `DELETE /api/users/:id` - Supprimer son compte
+
+### Ressources (Salles/Espaces)
+
+- `GET /api/resources` - Lister toutes les ressources disponibles
+- `GET /api/resources/:id` - Récupérer les détails d'une ressource
+- `POST /api/resources` - Créer une ressource (admin uniquement)
+- `PUT /api/resources/:id` - Modifier une ressource (admin uniquement)
+- `DELETE /api/resources/:id` - Supprimer une ressource (admin uniquement)
+- `GET /api/resources/:id/availability` - Vérifier les disponibilités d'une ressource
+
+### Réservations
+
+- `GET /api/reservations` - Lister ses réservations
+- `GET /api/reservations/:id` - Récupérer les détails d'une réservation
+- `POST /api/reservations` - Créer une réservation
+- `PUT /api/reservations/:id` - Modifier une réservation
+- `DELETE /api/reservations/:id` - Annuler une réservation
+
+### Administration
+
+- `GET /api/admin/reservations` - Lister toutes les réservations (admin)
+- `PUT /api/admin/reservations/:id/status` - Modifier le statut d'une réservation (admin)
+- `POST /api/admin/test-email` - Tester l'envoi d'emails (admin)
+- `GET /api/admin/email-logs` - Consulter les logs d'emails (admin)
+- `POST /api/admin/maintenance/update-past-reservations` - Mise à jour des réservations passées (admin)
+
 ## Tests avec RestClient
 
 Les fichiers `.http` dans le dossier `tests/requests/` permettent de tester les endpoints directement depuis VS Code avec l'extension REST Client.

@@ -1,33 +1,51 @@
 import { Request, Response, NextFunction } from "express";
 
+// Type guard pour vérifier si c'est une erreur
+function isError(err: unknown): err is Error {
+  return err instanceof Error;
+}
+
+// Type guard pour vérifier si c'est une erreur avec statusCode
+function hasStatusCode(err: unknown): err is Error & { statusCode: number } {
+  return isError(err) && "statusCode" in err;
+}
+
+// Type guard pour vérifier si c'est une erreur avec details
+function hasDetails(err: unknown): err is Error & { details: unknown } {
+  return isError(err) && "details" in err;
+}
+
 // Gestion centralisée des erreurs
 export const errorHandler = (
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   _next: NextFunction,
 ): void => {
-  console.error("❌ Erreur:", {
-    message: err.message,
-    stack: err.stack,
+  // Si ce n'est pas une erreur, la convertir
+  const error = isError(err) ? err : new Error(String(err));
+
+  console.error("Erreur:", {
+    message: error.message,
+    stack: error.stack,
     url: req.url,
     method: req.method,
   });
 
   // Erreur de validation
-  if (err.name === "ValidationError") {
+  if (error.name === "ValidationError") {
     res.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
-        message: err.message,
-        details: err.details || {},
+        message: error.message,
+        details: hasDetails(error) ? error.details : {},
       },
     });
     return;
   }
 
   // Erreur d'authentification
-  if (err.name === "UnauthorizedError" || err.message.includes("Token")) {
+  if (error.name === "UnauthorizedError" || error.message.includes("Token")) {
     res.status(401).json({
       error: {
         code: "UNAUTHORIZED",
@@ -38,7 +56,7 @@ export const errorHandler = (
   }
 
   // Erreur de permissions
-  if (err.name === "ForbiddenError") {
+  if (error.name === "ForbiddenError") {
     res.status(403).json({
       error: {
         code: "FORBIDDEN",
@@ -50,58 +68,58 @@ export const errorHandler = (
   }
 
   // Erreur de ressource non trouvée
-  if (err.name === "NotFoundError") {
+  if (error.name === "NotFoundError") {
     res.status(404).json({
       error: {
         code: "NOT_FOUND",
-        message: err.message || "Ressource non trouvée",
+        message: error.message || "Ressource non trouvée",
       },
     });
     return;
   }
 
   // Erreur de conflit (créneau non disponible)
-  if (err.name === "ConflictError") {
+  if (error.name === "ConflictError") {
     res.status(409).json({
       error: {
         code: "CONFLICT",
-        message: err.message || "Conflit détecté",
-        details: err.details || {},
+        message: error.message || "Conflit détecté",
+        details: hasDetails(error) ? error.details : {},
       },
     });
     return;
   }
 
   // Erreur métier (règles non respectées)
-  if (err.name === "BusinessError") {
+  if (error.name === "BusinessError") {
     res.status(422).json({
       error: {
         code: "UNPROCESSABLE_ENTITY",
-        message: err.message,
-        details: err.details || {},
+        message: error.message,
+        details: hasDetails(error) ? error.details : {},
       },
     });
     return;
   }
 
   // Erreur serveur générique
-  const statusCode = err.statusCode || 500;
+  const statusCode = hasStatusCode(error) ? error.statusCode : 500;
   res.status(statusCode).json({
     error: {
       code: "INTERNAL_SERVER_ERROR",
       message:
         process.env.NODE_ENV === "production"
           ? "Une erreur interne est survenue"
-          : err.message,
+          : error.message,
     },
   });
 };
 
 // Classes d'erreurs personnalisées
 export class ValidationError extends Error {
-  public details: any;
+  public details: Record<string, string>;
 
-  constructor(message: string, details: any = {}) {
+  constructor(message: string, details: Record<string, string> = {}) {
     super(message);
     this.name = "ValidationError";
     this.details = details;
@@ -130,9 +148,9 @@ export class NotFoundError extends Error {
 }
 
 export class ConflictError extends Error {
-  public details: any;
+  public details: Record<string, unknown>;
 
-  constructor(message: string, details: any = {}) {
+  constructor(message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "ConflictError";
     this.details = details;
@@ -140,9 +158,9 @@ export class ConflictError extends Error {
 }
 
 export class BusinessError extends Error {
-  public details: any;
+  public details: Record<string, unknown>;
 
-  constructor(message: string, details: any = {}) {
+  constructor(message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "BusinessError";
     this.details = details;

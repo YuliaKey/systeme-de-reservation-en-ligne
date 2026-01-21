@@ -5,6 +5,13 @@ import morgan from "morgan";
 import { config } from "./config/index.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
+// Import routes
+import authRoutes from "./routes/auth.routes.js";
+import usersRoutes from "./routes/users.routes.js";
+import resourcesRoutes from "./routes/resources.routes.js";
+import reservationsRoutes from "./routes/reservations.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+
 const app = express();
 
 // Middlewares de sécurité
@@ -34,6 +41,14 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/resources", resourcesRoutes);
+app.use("/api/reservations", reservationsRoutes);
+app.use("/api/admin", adminRoutes);
+
+// 404 handler
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
     error: {
@@ -43,6 +58,7 @@ app.use((_req: Request, res: Response) => {
   });
 });
 
+// Error handler
 app.use(errorHandler);
 
 export default app;

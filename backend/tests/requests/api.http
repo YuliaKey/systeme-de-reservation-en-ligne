@@ -175,3 +175,32 @@ Authorization: Bearer {{token}}
 ### Get Statistics with Date Range (Admin Only)
 GET {{baseUrl}}/admin/statistics?from=2026-01-01T00:00:00Z&to=2026-01-31T23:59:59Z
 Authorization: Bearer {{token}}
+
+### Update Past Reservations (Admin Maintenance)
+POST {{baseUrl}}/admin/maintenance/update-past-reservations
+Authorization: Bearer {{token}}
+
+###############################################
+# ADMIN - EMAIL TESTING & LOGS
+###############################################
+
+### Send Test Email (Admin Only)
+POST {{baseUrl}}/admin/test-email
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+### Get All Email Logs (Admin Only)
+GET {{baseUrl}}/admin/email-logs
+Authorization: Bearer {{token}}
+
+### Get Failed Emails (Admin Only)
+GET {{baseUrl}}/admin/email-logs?status=failed
+Authorization: Bearer {{token}}
+
+### Get Sent Emails (Admin Only)
+GET {{baseUrl}}/admin/email-logs?status=sent&limit=20
+Authorization: Bearer {{token}}
