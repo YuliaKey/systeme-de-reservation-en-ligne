@@ -228,5 +228,4 @@ export interface ReservationQueryParams {
 // Type pour Express Request avec user authentifié
 import { Request } from "express";
 
-// On utilise maintenant le type Request natif avec req.auth de Clerk
 export type AuthenticatedRequest = Request;

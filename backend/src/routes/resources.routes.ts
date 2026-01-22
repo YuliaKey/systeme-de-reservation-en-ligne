@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body, query, param } from "express-validator";
 import { ResourcesController } from "../controllers/resources.controller.js";
 import { requireAdmin } from "../middleware/auth.js";
-import { validateRequest } from "../middleware/validateRequest.js";
+import { validate } from "../middleware/validateRequest.js";
 
 const router = Router();
 
@@ -26,7 +26,7 @@ router.get(
       .optional()
       .isInt({ min: 0 })
       .withMessage("Offset doit être >= 0"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.getAllResources,
 );
@@ -40,7 +40,7 @@ router.get(
   "/:id",
   [
     param("id").isUUID().withMessage("ID de ressource invalide"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.getResourceById,
 );
@@ -62,7 +62,7 @@ router.get(
       .notEmpty()
       .isISO8601()
       .withMessage("endTime est requis et doit être au format ISO 8601"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.checkAvailability,
 );
@@ -125,7 +125,7 @@ router.post(
       .optional()
       .isIn(["available", "maintenance", "unavailable"])
       .withMessage("Status invalide"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.createResource,
 );
@@ -173,7 +173,7 @@ router.put(
       .optional()
       .isIn(["available", "maintenance", "unavailable"])
       .withMessage("Status invalide"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.updateResource,
 );
@@ -188,7 +188,7 @@ router.delete(
   requireAdmin,
   [
     param("id").isUUID().withMessage("ID de ressource invalide"),
-    validateRequest,
+    validate,
   ],
   ResourcesController.deleteResource,
 );

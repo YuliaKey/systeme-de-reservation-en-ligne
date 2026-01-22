@@ -28,7 +28,7 @@ export class UsersController {
 
       // Vérifier si l'utilisateur existe en DB, sinon le créer
       let userResult = await pool.query<User>(
-        "SELECT * FROM users WHERE clerk_id = $1",
+        "SELECT * FROM users WHERE id = $1",
         [userId],
       );
 
@@ -40,13 +40,13 @@ export class UsersController {
           `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim();
 
         await pool.query(
-          `INSERT INTO users (clerk_id, email, full_name) 
+          `INSERT INTO users (id, email, full_name) 
            VALUES ($1, $2, $3)`,
           [userId, email, fullName],
         );
 
         userResult = await pool.query<User>(
-          "SELECT * FROM users WHERE clerk_id = $1",
+          "SELECT * FROM users WHERE id = $1",
           [userId],
         );
       }
@@ -102,7 +102,7 @@ export class UsersController {
       const result = await pool.query<User>(
         `UPDATE users 
          SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
-         WHERE clerk_id = $${paramIndex}
+         WHERE id = $${paramIndex}
          RETURNING *`,
         values,
       );
@@ -144,7 +144,7 @@ export class UsersController {
     try {
       const { userId } = getAuth(req);
       if (!userId) throw new Error("Non authentifié");
-      
+
       // Vérifier qu'il n'y a pas de réservations actives
       const activeReservations = await pool.query(
         `SELECT COUNT(*) as count FROM reservations 
@@ -160,7 +160,7 @@ export class UsersController {
 
       // Récupérer l'utilisateur avant suppression (pour l'email)
       const userResult = await pool.query<User>(
-        "SELECT * FROM users WHERE clerk_id = $1",
+        "SELECT * FROM users WHERE id = $1",
         [userId],
       );
 
@@ -171,7 +171,7 @@ export class UsersController {
       const user = userResult.rows[0];
 
       // Supprimer d'abord dans la DB (cascade sur réservations et notifications)
-      await pool.query("DELETE FROM users WHERE clerk_id = $1", [userId]);
+      await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
       // Ensuite supprimer de Clerk
       await clerkClient.users.deleteUser(userId);

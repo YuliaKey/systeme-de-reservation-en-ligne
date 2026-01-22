@@ -2,7 +2,7 @@ import { Router } from "express";
 import { query, param, body } from "express-validator";
 import { AdminController } from "../controllers/admin.controller.js";
 import { requireAdmin } from "../middleware/auth.js";
-import { validateRequest } from "../middleware/validateRequest.js";
+import { validate } from "../middleware/validateRequest.js";
 
 const router = Router();
 
@@ -43,7 +43,7 @@ router.get(
       .optional()
       .isInt({ min: 0 })
       .withMessage("Offset doit être >= 0"),
-    validateRequest,
+    validate,
   ],
   AdminController.getAllReservations,
 );
@@ -56,10 +56,7 @@ router.get(
 router.get(
   "/reservations/:id",
   requireAdmin,
-  [
-    param("id").isUUID().withMessage("ID de réservation invalide"),
-    validateRequest,
-  ],
+  [param("id").isUUID().withMessage("ID de réservation invalide"), validate],
   AdminController.getReservationById,
 );
 
@@ -71,10 +68,7 @@ router.get(
 router.delete(
   "/reservations/:id",
   requireAdmin,
-  [
-    param("id").isUUID().withMessage("ID de réservation invalide"),
-    validateRequest,
-  ],
+  [param("id").isUUID().withMessage("ID de réservation invalide"), validate],
   AdminController.deleteReservation,
 );
 
@@ -106,7 +100,7 @@ router.post(
   requireAdmin,
   [
     body("email").notEmpty().isEmail().withMessage("Email valide requis"),
-    validateRequest,
+    validate,
   ],
   AdminController.sendTestEmail,
 );
@@ -132,7 +126,7 @@ router.get(
       .optional()
       .isInt({ min: 0 })
       .withMessage("Offset doit être >= 0"),
-    validateRequest,
+    validate,
   ],
   AdminController.getEmailLogs,
 );

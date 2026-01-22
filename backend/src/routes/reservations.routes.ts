@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body, query, param } from "express-validator";
 import { ReservationsController } from "../controllers/reservations.controller.js";
 import { requireAuth } from "../middleware/auth.js";
-import { validateRequest } from "../middleware/validateRequest.js";
+import { validate } from "../middleware/validateRequest.js";
 
 const router = Router();
 
@@ -39,7 +39,7 @@ router.get(
       .optional()
       .isInt({ min: 0 })
       .withMessage("Offset doit être >= 0"),
-    validateRequest,
+    validate,
   ],
   ReservationsController.getMyReservations,
 );
@@ -65,7 +65,7 @@ router.get(
       .optional()
       .isInt({ min: 0 })
       .withMessage("Offset doit être >= 0"),
-    validateRequest,
+    validate,
   ],
   ReservationsController.getMyHistory,
 );
@@ -78,10 +78,7 @@ router.get(
 router.get(
   "/:id",
   requireAuth,
-  [
-    param("id").isUUID().withMessage("ID de réservation invalide"),
-    validateRequest,
-  ],
+  [param("id").isUUID().withMessage("ID de réservation invalide"), validate],
   ReservationsController.getReservationById,
 );
 
@@ -111,7 +108,7 @@ router.post(
       .isString()
       .trim()
       .withMessage("Les notes doivent être une chaîne"),
-    validateRequest,
+    validate,
   ],
   ReservationsController.createReservation,
 );
@@ -143,7 +140,7 @@ router.put(
       .isString()
       .trim()
       .withMessage("Les notes doivent être une chaîne"),
-    validateRequest,
+    validate,
   ],
   ReservationsController.updateReservation,
 );
@@ -156,10 +153,7 @@ router.put(
 router.delete(
   "/:id",
   requireAuth,
-  [
-    param("id").isUUID().withMessage("ID de réservation invalide"),
-    validateRequest,
-  ],
+  [param("id").isUUID().withMessage("ID de réservation invalide"), validate],
   ReservationsController.cancelReservation,
 );
 

@@ -409,7 +409,7 @@ export class ReservationService {
 
       // Récupérer les informations de l'utilisateur
       const userResult = await pool.query<User>(
-        "SELECT * FROM users WHERE clerk_id = $1",
+        "SELECT * FROM users WHERE id = $1",
         [reservation.userId],
       );
 
