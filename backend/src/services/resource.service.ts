@@ -3,7 +3,6 @@ import {
   Resource,
   CreateResourceRequest,
   UpdateResourceRequest,
-  ResourceStatus,
   AvailabilityRule,
 } from "../types/index.js";
 import {
@@ -20,7 +19,7 @@ export class ResourceService {
    * Récupérer toutes les ressources avec filtres
    */
   static async getAllResources(
-    status?: ResourceStatus,
+    active?: boolean,
     limit: number = 50,
     offset: number = 0,
   ): Promise<{ resources: Resource[]; total: number }> {
@@ -31,9 +30,9 @@ export class ResourceService {
     const params: any[] = [];
     let paramIndex = 1;
 
-    if (status) {
-      query += ` AND status = $${paramIndex}`;
-      params.push(status);
+    if (active !== undefined) {
+      query += ` AND active = $${paramIndex}`;
+      params.push(active);
       paramIndex++;
     }
 
@@ -90,7 +89,7 @@ export class ResourceService {
     this.validateAvailabilityRules(data.availabilityRules);
 
     const result = await pool.query<Resource>(
-      `INSERT INTO resources (name, description, location, capacity, image_url, availability_rules, status)
+      `INSERT INTO resources (name, description, location, capacity, image_url, availability_rules, active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
@@ -100,7 +99,7 @@ export class ResourceService {
         data.capacity,
         data.imageUrl || null,
         JSON.stringify(data.availabilityRules),
-        data.status || "available",
+        data.active !== undefined ? data.active : true,
       ],
     );
 
@@ -175,9 +174,9 @@ export class ResourceService {
       paramIndex++;
     }
 
-    if (data.status !== undefined) {
-      updates.push(`status = $${paramIndex}`);
-      values.push(data.status);
+    if (data.active !== undefined) {
+      updates.push(`active = $${paramIndex}`);
+      values.push(data.active);
       paramIndex++;
     }
 
@@ -235,16 +234,23 @@ export class ResourceService {
   ): Promise<boolean> {
     const resource = await this.getResourceById(resourceId);
 
-    // Vérifier que la ressource est disponible
-    if (resource.status !== "available") {
-      return false;
+    // Vérifier que la ressource est disponible (active)
+    if (!resource.active) {
+      throw new BusinessError(
+        "Cette ressource n'est pas disponible à la réservation",
+      );
     }
 
-    // Vérifier les règles de disponibilité
-    if (
-      !this.isTimeWithinRules(startTime, endTime, resource.availabilityRules)
-    ) {
-      return false;
+    // Vérifier les règles de disponibilité (si elles existent)
+    if (resource.availabilityRules) {
+      const validationError = this.validateTimeAgainstRules(
+        startTime,
+        endTime,
+        resource.availabilityRules,
+      );
+      if (validationError) {
+        throw new BusinessError(validationError);
+      }
     }
 
     // Vérifier qu'il n'y a pas de conflit avec d'autres réservations
@@ -268,7 +274,13 @@ export class ResourceService {
     const result = await pool.query(query, params);
     const conflictCount = parseInt(result.rows[0].count);
 
-    return conflictCount === 0;
+    if (conflictCount > 0) {
+      throw new ConflictError(
+        "Cette ressource est déjà réservée pour cette période",
+      );
+    }
+
+    return true;
   }
 
   /**
@@ -332,30 +344,48 @@ export class ResourceService {
   }
 
   /**
-   * Vérifier si une période respecte les règles de disponibilité
+   * Valider une période contre les règles de disponibilité
+   * Retourne un message d'erreur spécifique ou null si valide
    */
-  private static isTimeWithinRules(
+  private static validateTimeAgainstRules(
     startTime: Date,
     endTime: Date,
-    rules: AvailabilityRule,
-  ): boolean {
+    rules?: AvailabilityRule | null,
+  ): string | null {
+    // Si pas de règles, la réservation est autorisée
+    if (!rules) {
+      return null;
+    }
+
     const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60); // en minutes
 
     // Vérifier la durée minimale
     if (rules.minDuration && duration < rules.minDuration) {
-      return false;
+      return `La durée de réservation doit être d'au moins ${rules.minDuration} minutes (${Math.floor(rules.minDuration / 60)}h${rules.minDuration % 60 > 0 ? (rules.minDuration % 60).toString().padStart(2, "0") : ""})`;
     }
 
     // Vérifier la durée maximale
     if (rules.maxDuration && duration > rules.maxDuration) {
-      return false;
+      return `La durée de réservation ne peut pas dépasser ${rules.maxDuration} minutes (${Math.floor(rules.maxDuration / 60)}h${rules.maxDuration % 60 > 0 ? (rules.maxDuration % 60).toString().padStart(2, "0") : ""})`;
     }
 
     // Vérifier le jour de la semaine
     if (rules.daysOfWeek && Array.isArray(rules.daysOfWeek)) {
       const dayOfWeek = startTime.getDay();
       if (!rules.daysOfWeek.includes(dayOfWeek)) {
-        return false;
+        const daysNames = [
+          "Dimanche",
+          "Lundi",
+          "Mardi",
+          "Mercredi",
+          "Jeudi",
+          "Vendredi",
+          "Samedi",
+        ];
+        const allowedDays = rules.daysOfWeek
+          .map((d) => daysNames[d])
+          .join(", ");
+        return `Cette ressource n'est disponible que les jours suivants: ${allowedDays}`;
       }
     }
 
@@ -373,10 +403,19 @@ export class ResourceService {
       }
 
       if (!isWithinRange) {
-        return false;
+        const ranges = rules.timeRanges
+          .map((r) => {
+            const startH = Math.floor(r.start);
+            const startM = Math.round((r.start - startH) * 60);
+            const endH = Math.floor(r.end);
+            const endM = Math.round((r.end - endH) * 60);
+            return `${startH.toString().padStart(2, "0")}:${startM.toString().padStart(2, "0")} - ${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
+          })
+          .join(", ");
+        return `Cette ressource n'est disponible que pendant les plages horaires suivantes: ${ranges}`;
       }
     }
 
-    return true;
+    return null;
   }
 }

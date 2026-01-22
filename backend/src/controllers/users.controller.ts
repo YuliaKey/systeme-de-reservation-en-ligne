@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { pool } from "../config/database.js";
 import { clerkClient } from "../config/clerk.js";
 import { EmailService } from "../services/email.service.js";
+import { toCamelCase } from "../utils/caseConverter.js";
 import {
   AuthenticatedRequest,
   User,
@@ -52,7 +53,7 @@ export class UsersController {
       }
 
       const user = userResult.rows[0];
-      res.json(user);
+      res.json(toCamelCase(user));
     } catch (error) {
       console.error("Erreur lors de la récupération du profil:", error);
       res.status(500).json({
@@ -123,7 +124,7 @@ export class UsersController {
         });
       }
 
-      res.json(result.rows[0]);
+      res.json(toCamelCase(result.rows[0]));
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil:", error);
       res.status(500).json({

@@ -2,6 +2,7 @@ import { Response } from "express";
 import { pool } from "../config/database.js";
 import { sendTestEmail } from "../config/email.js";
 import { ReservationService } from "../services/reservation.service.js";
+import { toCamelCase } from "../utils/caseConverter.js";
 import {
   AuthenticatedRequest,
   ReservationQueryParams,
@@ -36,7 +37,7 @@ export class AdminController {
       );
 
       res.json({
-        reservations: result.reservations,
+        reservations: toCamelCase(result.reservations),
         total: result.total,
         limit,
         offset,
@@ -63,7 +64,7 @@ export class AdminController {
         req.params.id,
         // Pas de userId, l'admin peut voir toutes les réservations
       );
-      res.json(reservation);
+      res.json(toCamelCase(reservation));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -132,9 +133,8 @@ export class AdminController {
       const resourcesStats = await pool.query(`
         SELECT 
           COUNT(*)::int as total,
-          COUNT(*) FILTER (WHERE status = 'available')::int as available,
-          COUNT(*) FILTER (WHERE status = 'maintenance')::int as maintenance,
-          COUNT(*) FILTER (WHERE status = 'unavailable')::int as unavailable
+          COUNT(*) FILTER (WHERE active = true)::int as active,
+          COUNT(*) FILTER (WHERE active = false)::int as inactive
         FROM resources
       `);
 
@@ -200,7 +200,7 @@ export class AdminController {
         topUsersByReservations: reservationsByUser.rows,
       };
 
-      res.json(statistics);
+      res.json(toCamelCase(statistics));
     } catch (error) {
       console.error("Erreur lors de la récupération des statistiques:", error);
       res.status(500).json({
@@ -316,7 +316,7 @@ export class AdminController {
       const result = await pool.query(query, params);
 
       res.json({
-        logs: result.rows,
+        logs: toCamelCase(result.rows),
         total,
         limit: parseInt(limit as string),
         offset: parseInt(offset as string),

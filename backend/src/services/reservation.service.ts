@@ -6,11 +6,7 @@ import {
   ReservationStatus,
   User,
 } from "../types/index.js";
-import {
-  NotFoundError,
-  ConflictError,
-  BusinessError,
-} from "../middleware/errorHandler.js";
+import { NotFoundError, BusinessError } from "../middleware/errorHandler.js";
 import { ResourceService } from "./resource.service.js";
 import { EmailService } from "./email.service.js";
 
@@ -29,9 +25,21 @@ export class ReservationService {
     endDate?: Date,
     limit: number = 50,
     offset: number = 0,
+    excludeCancelled: boolean = false,
   ): Promise<{ reservations: Reservation[]; total: number }> {
     let query = `
-      SELECT * FROM reservations
+      SELECT 
+        reservations.*,
+        json_build_object(
+          'id', resources.id,
+          'name', resources.name,
+          'description', resources.description,
+          'location', resources.location,
+          'capacity', resources.capacity,
+          'active', resources.active
+        ) as resource
+      FROM reservations
+      LEFT JOIN resources ON reservations.resource_id = resources.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -55,6 +63,11 @@ export class ReservationService {
       paramIndex++;
     }
 
+    if (excludeCancelled) {
+      query += ` AND status != 'cancelled'`;
+      query += ` AND end_time >= NOW()`;
+    }
+
     if (startDate) {
       query += ` AND end_time >= $${paramIndex}`;
       params.push(startDate);
@@ -68,10 +81,13 @@ export class ReservationService {
     }
 
     // Compter le total
-    const countResult = await pool.query(
-      query.replace("*", "COUNT(*) as count"),
-      params,
-    );
+    const countQuery = query
+      .replace(
+        /SELECT[\s\S]+?FROM reservations/,
+        "SELECT COUNT(*) as count FROM reservations",
+      )
+      .replace(/LEFT JOIN[\s\S]+?WHERE/, "WHERE");
+    const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].count);
 
     // Ajouter pagination
@@ -93,11 +109,27 @@ export class ReservationService {
     id: string,
     userId?: string,
   ): Promise<Reservation> {
-    let query = "SELECT * FROM reservations WHERE id = $1";
+    console.log("[GET RESERVATION BY ID] ID:", id, "UserID:", userId);
+
+    let query = `
+      SELECT 
+        reservations.*,
+        json_build_object(
+          'id', resources.id,
+          'name', resources.name,
+          'description', resources.description,
+          'location', resources.location,
+          'capacity', resources.capacity,
+          'active', resources.active
+        ) as resource
+      FROM reservations
+      LEFT JOIN resources ON reservations.resource_id = resources.id
+      WHERE reservations.id = $1
+    `;
     const params: any[] = [id];
 
     if (userId) {
-      query += " AND user_id = $2";
+      query += " AND reservations.user_id = $2";
       params.push(userId);
     }
 
@@ -131,18 +163,12 @@ export class ReservationService {
       throw new BusinessError("Impossible de réserver dans le passé");
     }
 
-    // Vérifier la disponibilité
-    const isAvailable = await ResourceService.checkAvailability(
+    // Vérifier la disponibilité (lance une exception avec message détaillé si non disponible)
+    await ResourceService.checkAvailability(
       data.resourceId,
       startTime,
       endTime,
     );
-
-    if (!isAvailable) {
-      throw new ConflictError(
-        "La ressource n'est pas disponible pour cette période",
-      );
-    }
 
     // Créer la réservation
     const result = await pool.query<Reservation>(
@@ -171,13 +197,21 @@ export class ReservationService {
     isAdmin: boolean,
     data: UpdateReservationRequest,
   ): Promise<Reservation> {
+    console.log("[UPDATE RESERVATION] Starting update for ID:", id);
+    console.log("[UPDATE RESERVATION] Data:", JSON.stringify(data));
+
     // Récupérer la réservation existante
     const existing = isAdmin
       ? await this.getReservationById(id)
       : await this.getReservationById(id, userId);
 
-    // Vérifier que la réservation est active
-    if (existing.status !== "active") {
+    console.log(
+      "[UPDATE RESERVATION] Existing reservation found, status:",
+      existing.status,
+    );
+
+    // Vérifier que la réservation est active ou modified
+    if (existing.status !== "active" && existing.status !== "modified") {
       throw new BusinessError(
         "Impossible de modifier une réservation qui n'est pas active",
       );
@@ -185,10 +219,15 @@ export class ReservationService {
 
     // Si modification des dates
     if (data.startTime || data.endTime) {
+      const existingStartTime =
+        (existing as any).start_time || existing.startTime;
+      const existingEndTime = (existing as any).end_time || existing.endTime;
       const startTime = data.startTime
         ? new Date(data.startTime)
-        : existing.startTime;
-      const endTime = data.endTime ? new Date(data.endTime) : existing.endTime;
+        : new Date(existingStartTime);
+      const endTime = data.endTime
+        ? new Date(data.endTime)
+        : new Date(existingEndTime);
 
       if (startTime >= endTime) {
         throw new BusinessError(
@@ -200,19 +239,14 @@ export class ReservationService {
         throw new BusinessError("Impossible de réserver dans le passé");
       }
 
-      // Vérifier la disponibilité (en excluant la réservation actuelle)
-      const isAvailable = await ResourceService.checkAvailability(
-        existing.resourceId,
+      const resourceId = (existing as any).resource_id || existing.resourceId;
+      console.log("[UPDATE RESERVATION] Resource ID:", resourceId);
+      await ResourceService.checkAvailability(
+        resourceId,
         startTime,
         endTime,
         id,
       );
-
-      if (!isAvailable) {
-        throw new ConflictError(
-          "La ressource n'est pas disponible pour cette période",
-        );
-      }
     }
 
     // Construire la requête de mise à jour
@@ -222,22 +256,21 @@ export class ReservationService {
 
     if (data.resourceId !== undefined) {
       // Vérifier la disponibilité pour la nouvelle ressource
+      const existingStartTime =
+        (existing as any).start_time || existing.startTime;
+      const existingEndTime = (existing as any).end_time || existing.endTime;
       const startTime = data.startTime
         ? new Date(data.startTime)
-        : existing.startTime;
-      const endTime = data.endTime ? new Date(data.endTime) : existing.endTime;
+        : new Date(existingStartTime);
+      const endTime = data.endTime
+        ? new Date(data.endTime)
+        : new Date(existingEndTime);
 
-      const isAvailable = await ResourceService.checkAvailability(
+      await ResourceService.checkAvailability(
         data.resourceId,
         startTime,
         endTime,
       );
-
-      if (!isAvailable) {
-        throw new ConflictError(
-          "La nouvelle ressource n'est pas disponible pour cette période",
-        );
-      }
 
       updates.push(`resource_id = $${paramIndex}`);
       values.push(data.resourceId);

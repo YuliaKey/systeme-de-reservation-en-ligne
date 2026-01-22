@@ -2,6 +2,7 @@ import { Response } from "express";
 import { getAuth } from "@clerk/express";
 import { clerkClient } from "../config/clerk.js";
 import { ReservationService } from "../services/reservation.service.js";
+import { toCamelCase } from "../utils/caseConverter.js";
 import {
   AuthenticatedRequest,
   CreateReservationRequest,
@@ -37,10 +38,11 @@ export class ReservationsController {
         query.endDate ? new Date(query.endDate as string) : undefined,
         limit,
         offset,
+        true,
       );
 
       res.json({
-        reservations: result.reservations,
+        reservations: toCamelCase(result.reservations),
         total: result.total,
         limit,
         offset,
@@ -80,7 +82,7 @@ export class ReservationsController {
       );
 
       res.json({
-        reservations: result.reservations,
+        reservations: toCamelCase(result.reservations),
         total: result.total,
         limit,
         offset,
@@ -110,7 +112,7 @@ export class ReservationsController {
         req.params.id,
         userId, // Filtrer par utilisateur connecté
       );
-      res.json(reservation);
+      res.json(toCamelCase(reservation));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -150,7 +152,7 @@ export class ReservationsController {
         userId,
         data,
       );
-      res.status(201).json(reservation);
+      res.status(201).json(toCamelCase(reservation));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -200,7 +202,7 @@ export class ReservationsController {
         isAdmin,
         data,
       );
-      res.json(reservation);
+      res.json(toCamelCase(reservation));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -259,7 +261,7 @@ export class ReservationsController {
         userId,
         isAdmin,
       );
-      res.json(reservation);
+      res.json(toCamelCase(reservation));
     } catch (error) {
       if (
         error instanceof Error &&

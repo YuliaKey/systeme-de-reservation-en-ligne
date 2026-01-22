@@ -27,8 +27,6 @@ export interface UpdateUserRequest {
 }
 
 // Types pour les ressources
-export type ResourceStatus = "available" | "maintenance" | "unavailable";
-
 export interface AvailabilityRule {
   daysOfWeek?: number[]; // 0=dimanche, 6=samedi
   timeRanges?: Array<{
@@ -47,7 +45,7 @@ export interface Resource {
   location: string | null;
   imageUrl: string | null;
   availabilityRules: AvailabilityRule;
-  status: ResourceStatus;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,7 +57,7 @@ export interface CreateResourceRequest {
   location?: string;
   imageUrl?: string;
   availabilityRules: AvailabilityRule;
-  status?: ResourceStatus;
+  active?: boolean;
 }
 
 export interface UpdateResourceRequest {
@@ -69,7 +67,7 @@ export interface UpdateResourceRequest {
   location?: string;
   imageUrl?: string;
   availabilityRules?: AvailabilityRule;
-  status?: ResourceStatus;
+  active?: boolean;
 }
 
 export interface PaginatedResources {
@@ -209,7 +207,7 @@ export interface ErrorEnvelope {
 
 // Types pour les paramètres de requête
 export interface ResourceQueryParams {
-  status?: ResourceStatus;
+  active?: boolean;
   limit?: string | number;
   offset?: string | number;
 }

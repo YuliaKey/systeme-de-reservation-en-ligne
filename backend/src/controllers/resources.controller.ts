@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { ResourceService } from "../services/resource.service.js";
+import { toCamelCase } from "../utils/caseConverter.js";
 import {
   AuthenticatedRequest,
   CreateResourceRequest,
@@ -22,13 +23,13 @@ export class ResourcesController {
       const offset = query.offset ? parseInt(query.offset as string) : 0;
 
       const result = await ResourceService.getAllResources(
-        query.status,
+        query.active,
         limit,
         offset,
       );
 
       res.json({
-        resources: result.resources,
+        resources: toCamelCase(result.resources),
         total: result.total,
         limit,
         offset,
@@ -49,7 +50,7 @@ export class ResourcesController {
   static async getResourceById(req: Request, res: Response): Promise<void> {
     try {
       const resource = await ResourceService.getResourceById(req.params.id);
-      res.json(resource);
+      res.json(toCamelCase(resource));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -123,7 +124,7 @@ export class ResourcesController {
     try {
       const data: CreateResourceRequest = req.body;
       const resource = await ResourceService.createResource(data);
-      res.status(201).json(resource);
+      res.status(201).json(toCamelCase(resource));
     } catch (error) {
       if (
         error instanceof Error &&
@@ -165,7 +166,7 @@ export class ResourcesController {
         req.params.id,
         data,
       );
-      res.json(resource);
+      res.json(toCamelCase(resource));
     } catch (error) {
       if (
         error instanceof Error &&
