@@ -210,7 +210,7 @@ export class ReservationService {
       existing.status,
     );
 
-    // Vérifier que la réservation est active ou modified
+    // Vérifier que la réservation est active ou modified (pour les anciennes réservations)
     if (existing.status !== "active" && existing.status !== "modified") {
       throw new BusinessError(
         "Impossible de modifier une réservation qui n'est pas active",
@@ -295,8 +295,8 @@ export class ReservationService {
       paramIndex++;
     }
 
-    // Marquer comme modifiée
-    updates.push(`status = 'modified'`);
+    // La réservation reste 'active' après modification
+    // (pas de changement de status)
 
     if (updates.length === 0) {
       return existing;
@@ -334,7 +334,7 @@ export class ReservationService {
       ? await this.getReservationById(id)
       : await this.getReservationById(id, userId);
 
-    // Vérifier que la réservation est active ou modifiée
+    // Vérifier que la réservation est active ou modified (pour les anciennes réservations)
     if (existing.status !== "active" && existing.status !== "modified") {
       throw new BusinessError(
         "Impossible d'annuler une réservation qui n'est pas active",
@@ -383,23 +383,37 @@ export class ReservationService {
     offset: number = 0,
   ): Promise<{ reservations: Reservation[]; total: number }> {
     let query = `
-      SELECT * FROM reservations
-      WHERE user_id = $1
+      SELECT reservations.*, 
+             json_build_object(
+               'id', resources.id,
+               'name', resources.name,
+               'description', resources.description,
+               'capacity', resources.capacity,
+               'location', resources.location,
+               'active', resources.active
+             ) as resource
+      FROM reservations
+      LEFT JOIN resources ON reservations.resource_id = resources.id
+      WHERE reservations.user_id = $1
     `;
 
     if (!includeActive) {
-      query += ` AND (status != 'active' OR end_time < NOW())`;
+      query += ` AND (reservations.status != 'active' OR reservations.end_time < NOW())`;
     }
 
     // Compter le total
-    const countResult = await pool.query(
-      query.replace("*", "COUNT(*) as count"),
-      [userId],
-    );
+    const countQuery =
+      `
+      SELECT COUNT(*) as count 
+      FROM reservations 
+      WHERE user_id = $1
+    ` + (includeActive ? "" : ` AND (status != 'active' OR end_time < NOW())`);
+
+    const countResult = await pool.query(countQuery, [userId]);
     const total = parseInt(countResult.rows[0].count);
 
     // Ajouter pagination
-    query += ` ORDER BY start_time DESC LIMIT $2 OFFSET $3`;
+    query += ` ORDER BY reservations.start_time DESC LIMIT $2 OFFSET $3`;
 
     const result = await pool.query<Reservation>(query, [
       userId,
