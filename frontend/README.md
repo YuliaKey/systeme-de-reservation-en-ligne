@@ -1,114 +1,183 @@
-# Frontend - Réservation de Salles
+# Frontend - Application de Réservation de salles de réunions
 
-## Résumé du projet
+Application React avec TypeScript, Tailwind CSS et Clerk pour l'authentification.
 
-Frontend TypeScript + React pour une application de réservation de salles de réunion.
-Respecte le contrat OpenAPI défini en Phase 1 du TP.
+## Technologies
+
+- **React 18.2** - Framework UI
+- **TypeScript** - Typage statique
+- **Vite** - Build tool et dev server
+- **Tailwind CSS** - Framework CSS utility-first
+- **Clerk** - Authentification et gestion d'utilisateurs
+- **React Query** - Gestion de l'état serveur et cache
+- **React Router** - Routing
+- **React Hook Form + Zod** - Validation de formulaires
+- **Axios** - Client HTTP
+- **Lucide React** - Icônes
+- **React Hot Toast** - Notifications
 
 ## Structure du projet
 
 ```
 src/
-├── types/              # Types TypeScript (API contract)
-├── services/           # Services API (roomsService, reservationsService, apiClient)
-├── hooks/              # Custom hooks (useAsync)
 ├── components/
-│   ├── transverse/     # Composants réutilisables (Layout, Banners, States)
-│   └── metier/         # Composants métier (RoomCard, BookingForm, etc.)
-├── pages/              # Pages de l'application
-├── App.tsx             # Routing principal
-├── main.tsx            # Point d'entrée
-└── index.css           # Styles globaux
+│   ├── ui/              # Composants UI réutilisables
+│   │   ├── Loading.tsx
+│   │   ├── ErrorState.tsx
+│   │   └── EmptyState.tsx
+│   └── features/        # Composants métier
+├── hooks/
+│   └── useCurrentUser.ts
+├── layouts/
+│   └── MainLayout.tsx   # Layout principal avec header/footer
+├── pages/               # Pages de l'application
+│   ├── HomePage.tsx
+│   ├── SignInPage.tsx
+│   ├── ResourcesListPage.tsx
+│   ├── ResourceDetailPage.tsx
+│   ├── ReservationsPage.tsx
+│   ├── ReservationDetailPage.tsx
+│   ├── HistoryPage.tsx
+│   ├── ProfilePage.tsx
+│   ├── AdminDashboardPage.tsx
+│   ├── AdminResourcesPage.tsx
+│   ├── AdminReservationsPage.tsx
+│   └── NotFoundPage.tsx
+├── services/            # Services API
+│   ├── api.ts
+│   ├── resources.service.ts
+│   ├── reservations.service.ts
+│   ├── users.service.ts
+│   └── admin.service.ts
+├── types/
+│   └── index.ts         # Types TypeScript
+├── utils/               # Utilitaires
+│   ├── date.ts
+│   └── format.ts
+├── App.tsx              # Configuration des routes
+├── main.tsx             # Point d'entrée avec providers
+└── index.css            # Styles globaux et Tailwind
+
 ```
 
-## Architecture
+## Installation
 
-### Pages
-
-- `/` - Listing des salles avec recherche
-- `/rooms/:id` - Détail salle et sélection de créneau
-- `/rooms/:id/book` - Formulaire de réservation
-- `/reservations/:id` - Confirmation de réservation
-- `/my-reservations` - Mes réservations
-
-### États d'interface
-
-Chaque page gère les états suivants:
-
-- `idle` - État initial
-- `loading` - Chargement en cours
-- `success` - Données chargées
-- `empty` - Aucune donnée
-- `error` - Erreur (technique ou métier)
-
-### Communication API
-
-Le `apiClient` centralise les requêtes HTTP et mappe les erreurs en `UiError`.
-Les services `roomsService` et `reservationsService` consomment l'API selon le contrat.
-
-## Installation et démarrage
+1. **Installer les dépendances**
 
 ```bash
-# Installer les dépendances
+cd frontend
 npm install
-
-# Démarrer le serveur de développement
-npm run dev
-
-# Build pour la production
-npm run build
-
-# Preview du build
-npm run preview
 ```
 
-## Mode Mock (Sans Backend)
+2. **Configurer les variables d'environnement**
 
-L'application peut fonctionner **sans backend** grâce au système de mock intégré.
-
-### Activer/Désactiver le mode Mock
-
-Éditez `.env.development` :
+Créez un fichier `.env` à la racine du dossier frontend :
 
 ```env
-# Mode MOCK (données simulées - par défaut)
-VITE_USE_MOCK=true
-
-# Mode REAL (nécessite le backend sur http://localhost:3000)
-VITE_USE_MOCK=false
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_YOUR_KEY_HERE
+VITE_API_URL=http://localhost:3000/api
 ```
 
-### Données Mock disponibles
+Pour obtenir votre clé Clerk :
 
-- **5 salles** de réunion avec différentes capacités (6 à 100 personnes)
-- **3 réservations** pré-créées (2 confirmées, 1 annulée)
-- Créneaux de disponibilité générés aléatoirement
-- Validation des conflits de réservation
-- Délais réseau simulés (300-600ms)
+- Créez un compte sur [clerk.com](https://clerk.com)
+- Créez une nouvelle application
+- Copiez la "Publishable Key" depuis le dashboard
+- Configurez les méthodes d'authentification (Email, Magic Link, etc.)
 
-### Exemples de recherche
+3. **Lancer le serveur de développement**
 
-**Recherche simple :**
+```bash
+npm run dev
+```
 
-- Dates : 2026-01-25 09:00 → 2026-01-25 17:00
-- Capacité : 10 personnes
+L'application sera accessible sur `http://localhost:5173`
 
-**Recherche avec filtres :**
+## Pages disponibles
 
-- Dates : 2026-01-26 10:00 → 2026-01-26 12:00
-- Capacité : 10 personnes
-- Localisation : 2ème
-- Équipements : Wifi,Projecteur
+### Pages publiques
 
-## Fonctionnalités implémentées
+- `/` - Page d'accueil
+- `/sign-in` - Page de connexion (Clerk)
 
-✅ Consultation de la liste des salles avec filtres
-✅ Consultation du détail d'une salle
-✅ Sélection de créneau de disponibilité
-✅ Création d'une réservation
-✅ Confirmation de réservation avec numéro
-✅ Consultation de mes réservations
-✅ Annulation de réservation
-✅ Feedback utilisateur clair (succès/erreur)
-✅ Distinction erreurs techniques vs métier
-✅ Gestion d'état cohérente
+### Pages utilisateur (authentification requise)
+
+- `/resources` - Liste des ressources
+- `/resources/:id` - Détail d'une ressource
+- `/reservations` - Mes réservations actives
+- `/reservations/:id` - Détail d'une réservation
+- `/history` - Historique de toutes mes réservations
+- `/profile` - Mon profil utilisateur
+
+### Pages administrateur (authentification + rôle admin requis)
+
+- `/admin` - Dashboard administrateur avec statistiques
+- `/admin/resources` - Gestion des ressources
+- `/admin/reservations` - Gestion des réservations
+
+### Pages système
+
+- `*` (404) - Page introuvable
+
+## Authentification
+
+L'authentification est gérée par **Clerk** avec :
+
+- Magic Link (lien email)
+- 2FA (authentification à deux facteurs)
+- Gestion de session automatique
+- Protection des routes
+
+## Services API
+
+Tous les services utilisent **Axios** avec:
+
+- Intercepteur pour ajouter le token Clerk automatiquement
+- Gestion d'erreurs centralisée
+- Base URL configurable via `.env`
+
+## États de l'UI
+
+Chaque requête réseau gère 4 états :
+
+1. **Loading** - Affichage d'un spinner ou skeleton
+2. **Success** - Affichage des données + toast de succès
+3. **Error** - Affichage d'un message d'erreur + toast d'erreur
+4. **Empty** - Affichage d'un état vide si aucune donnée
+
+## Tailwind CSS
+
+Classes utilitaires personnalisées disponibles dans `index.css` :
+
+### Boutons
+
+- `.btn` - Style de base
+- `.btn-primary` - Bouton principal (bleu)
+- `.btn-secondary` - Bouton secondaire (gris)
+- `.btn-danger` - Bouton de danger (rouge)
+- `.btn-sm` / `.btn-lg` - Tailles
+
+### Cartes
+
+- `.card` - Carte avec ombre et padding
+
+### Badges
+
+- `.badge-green` - Badge vert (actif, disponible, envoyé)
+- `.badge-yellow` - Badge jaune (modifié, maintenance)
+- `.badge-red` - Badge rouge (annulé, indisponible, échoué)
+- `.badge-gray` - Badge gris (passé, autre)
+- `.badge-blue` - Badge bleu (info)
+
+### Formulaires
+
+- `.input` - Style d'input de base
+
+## Scripts disponibles
+
+```bash
+npm run dev        # Lancer le serveur de développement
+npm run build      # Build de production
+npm run preview    # Prévisualiser le build
+npm run lint       # Linter le code
+```
