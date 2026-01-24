@@ -71,6 +71,36 @@ export class ResourcesController {
   }
 
   /**
+   * GET /api/resources/search
+   * Rechercher les salles disponibles par ville et dates
+   */
+  static async searchAvailableResources(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const { city, startTime, endTime } = req.query;
+
+      const resources = await ResourceService.searchAvailableResources(
+        city as string,
+        new Date(startTime as string),
+        new Date(endTime as string),
+      );
+
+      res.json({
+        resources: toCamelCase(resources),
+        total: resources.length,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la recherche des ressources:", error);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "Erreur lors de la recherche des ressources",
+      });
+    }
+  }
+
+  /**
    * GET /api/resources/:id/availability
    * Vérifier la disponibilité d'une ressource
    */

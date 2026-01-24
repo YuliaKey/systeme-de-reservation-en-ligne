@@ -7,6 +7,33 @@ import { validate } from "../middleware/validateRequest.js";
 const router = Router();
 
 /**
+ * GET /api/resources/search
+ * Rechercher les salles disponibles par ville et dates
+ * Public
+ */
+router.get(
+  "/search",
+  [
+    query("city")
+      .notEmpty()
+      .isIn(["Paris", "Nice", "Lyon", "Bordeaux", "Marseille"])
+      .withMessage(
+        "La ville doit être: Paris, Nice, Lyon, Bordeaux ou Marseille",
+      ),
+    query("startTime")
+      .notEmpty()
+      .isISO8601()
+      .withMessage("startTime est requis et doit être au format ISO 8601"),
+    query("endTime")
+      .notEmpty()
+      .isISO8601()
+      .withMessage("endTime est requis et doit être au format ISO 8601"),
+    validate,
+  ],
+  ResourcesController.searchAvailableResources,
+);
+
+/**
  * GET /api/resources
  * Récupérer toutes les ressources
  * Public (ou avec auth optionnelle)
@@ -38,10 +65,7 @@ router.get(
  */
 router.get(
   "/:id",
-  [
-    param("id").isUUID().withMessage("ID de ressource invalide"),
-    validate,
-  ],
+  [param("id").isUUID().withMessage("ID de ressource invalide"), validate],
   ResourcesController.getResourceById,
 );
 
@@ -93,31 +117,42 @@ router.post(
       .trim()
       .isLength({ max: 255 })
       .withMessage("Le lieu doit contenir au maximum 255 caractères"),
+    body("city")
+      .notEmpty()
+      .isString()
+      .isIn(["Paris", "Nice", "Lyon", "Bordeaux", "Marseille"])
+      .withMessage(
+        "La ville doit être: Paris, Nice, Lyon, Bordeaux ou Marseille",
+      ),
     body("capacity")
       .notEmpty()
       .isInt({ min: 1 })
       .withMessage("La capacité est requise et doit être >= 1"),
-    body("imageUrl")
+    body("images")
+      .optional()
+      .isArray()
+      .withMessage("Les images doivent être un tableau"),
+    body("images.*")
       .optional()
       .isURL()
-      .withMessage("L'URL de l'image doit être valide"),
-    body("availabilityRules")
+      .withMessage("Chaque image doit être une URL valide"),
+    body("availability")
       .notEmpty()
       .isObject()
       .withMessage("Les règles de disponibilité sont requises"),
-    body("availabilityRules.minDuration")
+    body("availability.minDuration")
       .optional()
       .isInt({ min: 1 })
       .withMessage("La durée minimale doit être >= 1 minute"),
-    body("availabilityRules.maxDuration")
+    body("availability.maxDuration")
       .optional()
       .isInt({ min: 1 })
       .withMessage("La durée maximale doit être >= 1 minute"),
-    body("availabilityRules.daysOfWeek")
+    body("availability.daysOfWeek")
       .optional()
       .isArray()
       .withMessage("Les jours de la semaine doivent être un tableau"),
-    body("availabilityRules.timeRanges")
+    body("availability.timeRanges")
       .optional()
       .isArray()
       .withMessage("Les plages horaires doivent être un tableau"),
@@ -157,15 +192,26 @@ router.put(
       .trim()
       .isLength({ max: 255 })
       .withMessage("Le lieu doit contenir au maximum 255 caractères"),
+    body("city")
+      .optional()
+      .isString()
+      .isIn(["Paris", "Nice", "Lyon", "Bordeaux", "Marseille"])
+      .withMessage(
+        "La ville doit être: Paris, Nice, Lyon, Bordeaux ou Marseille",
+      ),
     body("capacity")
       .optional()
       .isInt({ min: 1 })
       .withMessage("La capacité doit être >= 1"),
-    body("imageUrl")
+    body("images")
+      .optional()
+      .isArray()
+      .withMessage("Les images doivent être un tableau"),
+    body("images.*")
       .optional()
       .isURL()
-      .withMessage("L'URL de l'image doit être valide"),
-    body("availabilityRules")
+      .withMessage("Chaque image doit être une URL valide"),
+    body("availability")
       .optional()
       .isObject()
       .withMessage("Les règles de disponibilité doivent être un objet"),
@@ -186,10 +232,7 @@ router.put(
 router.delete(
   "/:id",
   requireAdmin,
-  [
-    param("id").isUUID().withMessage("ID de ressource invalide"),
-    validate,
-  ],
+  [param("id").isUUID().withMessage("ID de ressource invalide"), validate],
   ResourcesController.deleteResource,
 );
 

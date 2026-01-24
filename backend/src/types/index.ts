@@ -43,8 +43,9 @@ export interface Resource {
   description: string | null;
   capacity: number;
   location: string | null;
-  imageUrl: string | null;
-  availabilityRules: AvailabilityRule;
+  city: string;
+  images: string[] | null;
+  availability: AvailabilityRule;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -55,8 +56,11 @@ export interface CreateResourceRequest {
   description?: string;
   capacity: number;
   location?: string;
-  imageUrl?: string;
-  availabilityRules: AvailabilityRule;
+  city: string;
+  images?: string[];
+  pricePerHour?: number;
+  amenities?: string[];
+  availability: AvailabilityRule;
   active?: boolean;
 }
 
@@ -65,8 +69,11 @@ export interface UpdateResourceRequest {
   description?: string;
   capacity?: number;
   location?: string;
-  imageUrl?: string;
-  availabilityRules?: AvailabilityRule;
+  city?: string;
+  images?: string[];
+  pricePerHour?: number;
+  amenities?: string[];
+  availability?: AvailabilityRule;
   active?: boolean;
 }
 

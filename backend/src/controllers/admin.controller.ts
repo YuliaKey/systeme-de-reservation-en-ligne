@@ -181,12 +181,12 @@ export class AdminController {
       // Réservations par utilisateur (top 5)
       const reservationsByUser = await pool.query(`
         SELECT 
-          u.clerk_id as "userId",
+          u.id as "userId",
           u.full_name as "userName",
           COUNT(r.id)::int as "reservationCount"
         FROM users u
-        LEFT JOIN reservations r ON u.clerk_id = r.user_id
-        GROUP BY u.clerk_id, u.full_name
+        LEFT JOIN reservations r ON u.id = r.user_id
+        GROUP BY u.id, u.full_name
         ORDER BY "reservationCount" DESC
         LIMIT 5
       `);

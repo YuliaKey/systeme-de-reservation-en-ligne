@@ -23,6 +23,7 @@ CREATE TABLE resources (
   description TEXT NOT NULL,
   capacity INTEGER,
   location VARCHAR(255),
+  city VARCHAR(100) NOT NULL,
   amenities JSONB DEFAULT '[]'::jsonb,
   price_per_hour DECIMAL(10, 2),
   images JSONB DEFAULT '[]'::jsonb,

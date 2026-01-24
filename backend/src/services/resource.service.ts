@@ -72,6 +72,42 @@ export class ResourceService {
   }
 
   /**
+   * Rechercher les salles disponibles par ville et dates
+   */
+  static async searchAvailableResources(
+    city: string,
+    startTime: Date,
+    endTime: Date,
+  ): Promise<Resource[]> {
+    // Récupérer toutes les salles actives de la ville
+    const query = `
+      SELECT r.* 
+      FROM resources r
+      WHERE r.city = $1 
+        AND r.active = true
+        AND NOT EXISTS (
+          SELECT 1 FROM reservations res
+          WHERE res.resource_id = r.id
+            AND res.status = 'active'
+            AND (
+              (res.start_time <= $2 AND res.end_time > $2)
+              OR (res.start_time < $3 AND res.end_time >= $3)
+              OR (res.start_time >= $2 AND res.end_time <= $3)
+            )
+        )
+      ORDER BY r.name ASC
+    `;
+
+    const result = await pool.query<Resource>(query, [
+      city,
+      startTime,
+      endTime,
+    ]);
+
+    return result.rows;
+  }
+
+  /**
    * Créer une nouvelle ressource
    */
   static async createResource(data: CreateResourceRequest): Promise<Resource> {
@@ -86,19 +122,22 @@ export class ResourceService {
     }
 
     // Valider les règles de disponibilité
-    this.validateAvailabilityRules(data.availabilityRules);
+    this.validateAvailabilityRules(data.availability);
 
     const result = await pool.query<Resource>(
-      `INSERT INTO resources (name, description, location, capacity, image_url, availability_rules, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO resources (name, description, location, city, capacity, images, price_per_hour, amenities, availability, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [
         data.name,
         data.description || null,
         data.location || null,
+        data.city,
         data.capacity,
-        data.imageUrl || null,
-        JSON.stringify(data.availabilityRules),
+        data.images ? JSON.stringify(data.images) : '[]',
+        data.pricePerHour || null,
+        data.amenities ? JSON.stringify(data.amenities) : null,
+        JSON.stringify(data.availability),
         data.active !== undefined ? data.active : true,
       ],
     );
@@ -129,8 +168,8 @@ export class ResourceService {
     }
 
     // Valider les règles de disponibilité si fournies
-    if (data.availabilityRules) {
-      this.validateAvailabilityRules(data.availabilityRules);
+    if (data.availability) {
+      this.validateAvailabilityRules(data.availability);
     }
 
     // Construire la requête de mise à jour dynamiquement
@@ -156,21 +195,39 @@ export class ResourceService {
       paramIndex++;
     }
 
+    if (data.city !== undefined) {
+      updates.push(`city = $${paramIndex}`);
+      values.push(data.city);
+      paramIndex++;
+    }
+
     if (data.capacity !== undefined) {
       updates.push(`capacity = $${paramIndex}`);
       values.push(data.capacity);
       paramIndex++;
     }
 
-    if (data.imageUrl !== undefined) {
-      updates.push(`image_url = $${paramIndex}`);
-      values.push(data.imageUrl);
+    if (data.images !== undefined) {
+      updates.push(`images = $${paramIndex}`);
+      values.push(JSON.stringify(data.images));
       paramIndex++;
     }
 
-    if (data.availabilityRules !== undefined) {
-      updates.push(`availability_rules = $${paramIndex}`);
-      values.push(JSON.stringify(data.availabilityRules));
+    if (data.pricePerHour !== undefined) {
+      updates.push(`price_per_hour = $${paramIndex}`);
+      values.push(data.pricePerHour);
+      paramIndex++;
+    }
+
+    if (data.amenities !== undefined) {
+      updates.push(`amenities = $${paramIndex}`);
+      values.push(JSON.stringify(data.amenities));
+      paramIndex++;
+    }
+
+    if (data.availability !== undefined) {
+      updates.push(`availability = $${paramIndex}`);
+      values.push(JSON.stringify(data.availability));
       paramIndex++;
     }
 
@@ -242,11 +299,11 @@ export class ResourceService {
     }
 
     // Vérifier les règles de disponibilité (si elles existent)
-    if (resource.availabilityRules) {
+    if (resource.availability) {
       const validationError = this.validateTimeAgainstRules(
         startTime,
         endTime,
-        resource.availabilityRules,
+        resource.availability,
       );
       if (validationError) {
         throw new BusinessError(validationError);

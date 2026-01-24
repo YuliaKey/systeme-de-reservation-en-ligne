@@ -17,6 +17,16 @@ export class ReservationService {
   /**
    * Récupérer toutes les réservations avec filtres
    */
+  static async updatePassedReservations(): Promise<void> {
+    // Mettre à jour automatiquement le statut des réservations dont la date de fin est passée
+    await pool.query(
+      `UPDATE reservations 
+       SET status = 'passed', updated_at = CURRENT_TIMESTAMP
+       WHERE status IN ('active', 'modified') 
+       AND end_time < NOW()`,
+    );
+  }
+
   static async getAllReservations(
     userId?: string,
     resourceId?: string,
@@ -27,6 +37,9 @@ export class ReservationService {
     offset: number = 0,
     excludeCancelled: boolean = false,
   ): Promise<{ reservations: Reservation[]; total: number }> {
+    // Mettre à jour les réservations passées
+    await this.updatePassedReservations();
+
     let query = `
       SELECT 
         reservations.*,
@@ -37,9 +50,16 @@ export class ReservationService {
           'location', resources.location,
           'capacity', resources.capacity,
           'active', resources.active
-        ) as resource
+        ) as resource,
+        json_build_object(
+          'id', users.id,
+          'email', users.email,
+          'fullName', users.full_name,
+          'role', users.role
+        ) as user
       FROM reservations
       LEFT JOIN resources ON reservations.resource_id = resources.id
+      LEFT JOIN users ON reservations.user_id = users.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -109,6 +129,9 @@ export class ReservationService {
     id: string,
     userId?: string,
   ): Promise<Reservation> {
+    // Mettre à jour les réservations passées
+    await this.updatePassedReservations();
+
     console.log("[GET RESERVATION BY ID] ID:", id, "UserID:", userId);
 
     let query = `
@@ -121,9 +144,16 @@ export class ReservationService {
           'location', resources.location,
           'capacity', resources.capacity,
           'active', resources.active
-        ) as resource
+        ) as resource,
+        json_build_object(
+          'id', users.id,
+          'email', users.email,
+          'fullName', users.full_name,
+          'role', users.role
+        ) as user
       FROM reservations
       LEFT JOIN resources ON reservations.resource_id = resources.id
+      LEFT JOIN users ON reservations.user_id = users.id
       WHERE reservations.id = $1
     `;
     const params: any[] = [id];
@@ -382,6 +412,9 @@ export class ReservationService {
     limit: number = 50,
     offset: number = 0,
   ): Promise<{ reservations: Reservation[]; total: number }> {
+    // Mettre à jour les réservations passées
+    await this.updatePassedReservations();
+
     let query = `
       SELECT reservations.*, 
              json_build_object(
@@ -391,14 +424,22 @@ export class ReservationService {
                'capacity', resources.capacity,
                'location', resources.location,
                'active', resources.active
-             ) as resource
+             ) as resource,
+             json_build_object(
+               'id', users.id,
+               'email', users.email,
+               'fullName', users.full_name,
+               'role', users.role
+             ) as user
       FROM reservations
       LEFT JOIN resources ON reservations.resource_id = resources.id
+      LEFT JOIN users ON reservations.user_id = users.id
       WHERE reservations.user_id = $1
     `;
 
     if (!includeActive) {
-      query += ` AND (reservations.status != 'active' OR reservations.end_time < NOW())`;
+      // Inclure toutes les réservations sauf celles qui sont actives/modifiées ET dont la date n'est pas passée
+      query += ` AND (reservations.status IN ('cancelled', 'passed') OR reservations.end_time < NOW())`;
     }
 
     // Compter le total
@@ -407,7 +448,10 @@ export class ReservationService {
       SELECT COUNT(*) as count 
       FROM reservations 
       WHERE user_id = $1
-    ` + (includeActive ? "" : ` AND (status != 'active' OR end_time < NOW())`);
+    ` +
+      (includeActive
+        ? ""
+        : ` AND (status IN ('cancelled', 'passed') OR end_time < NOW())`);
 
     const countResult = await pool.query(countQuery, [userId]);
     const total = parseInt(countResult.rows[0].count);
