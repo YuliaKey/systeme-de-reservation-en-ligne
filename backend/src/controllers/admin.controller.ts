@@ -2,6 +2,8 @@ import { Response } from "express";
 import { pool } from "../config/database.js";
 import { sendTestEmail } from "../config/email.js";
 import { ReservationService } from "../services/reservation.service.js";
+import { ReminderService } from "../services/reminder.service.js";
+import { EmailService } from "../services/email.service.js";
 import { toCamelCase } from "../utils/caseConverter.js";
 import {
   AuthenticatedRequest,
@@ -326,6 +328,115 @@ export class AdminController {
       res.status(500).json({
         error: "Internal Server Error",
         message: "Erreur lors de la récupération des logs d'emails",
+      });
+    }
+  }
+
+  /**
+   * POST /api/admin/test-reminder
+   * Envoyer un email de rappel de test pour une réservation spécifique
+   */
+  static async sendTestReminder(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const { reservationId } = req.body;
+
+      if (!reservationId) {
+        res.status(400).json({
+          error: "Bad Request",
+          message: "L'ID de la réservation est requis",
+        });
+        return;
+      }
+
+      await ReminderService.sendTestReminder(reservationId);
+
+      res.json({
+        success: true,
+        message: `Rappel de test envoyé pour la réservation ${reservationId}`,
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du rappel de test:", error);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erreur lors de l'envoi du rappel",
+      });
+    }
+  }
+
+  /**
+   * POST /api/admin/test-critical-incident
+   * Envoyer un email d'alerte critique de test
+   */
+  static async sendTestCriticalIncident(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const { incidentType, details } = req.body;
+
+      if (!incidentType || !details) {
+        res.status(400).json({
+          error: "Bad Request",
+          message: "Le type d'incident et les détails sont requis",
+        });
+        return;
+      }
+
+      const result = await EmailService.sendCriticalIncidentEmail(
+        incidentType,
+        details,
+        0, // Test, pas d'utilisateurs affectés
+      );
+
+      if (result.status === "sent") {
+        res.json({
+          success: true,
+          message: "Alerte critique de test envoyée à l'admin",
+          recipient: result.recipient,
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: "Email Send Failed",
+          message: "Échec de l'envoi de l'alerte critique",
+          details: result.errorMessage,
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'alerte critique:", error);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "Erreur lors de l'envoi de l'alerte critique",
+      });
+    }
+  }
+
+  /**
+   * POST /api/admin/check-reminders
+   * Vérifier manuellement et envoyer les rappels (pour test/debug)
+   */
+  static async checkReminders(
+    _req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
+    try {
+      await ReminderService.checkAndSendReminders();
+
+      res.json({
+        success: true,
+        message: "Vérification des rappels effectuée",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la vérification des rappels:", error);
+      res.status(500).json({
+        error: "Internal Server Error",
+        message: "Erreur lors de la vérification des rappels",
       });
     }
   }

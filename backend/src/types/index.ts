@@ -116,6 +116,7 @@ export interface CreateReservationRequest {
   resourceId: string;
   startTime: string; // ISO 8601
   endTime: string;
+  numberOfPeople?: number;
   notes?: string;
 }
 
@@ -123,6 +124,7 @@ export interface UpdateReservationRequest {
   resourceId?: string;
   startTime?: string;
   endTime?: string;
+  numberOfPeople?: number;
   notes?: string;
 }
 

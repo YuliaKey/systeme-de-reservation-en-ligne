@@ -2,6 +2,7 @@ import app from "./app.js";
 import { config } from "./config/index.js";
 import { testConnection } from "./config/database.js";
 import { verifyEmailConnection } from "./config/email.js";
+import { ReminderService } from "./services/reminder.service.js";
 
 async function startServer() {
   console.log("Démarrage du serveur...");
@@ -17,6 +18,9 @@ async function startServer() {
 
   if (config.email.auth.user && config.email.auth.pass) {
     await verifyEmailConnection();
+
+    // Démarrer le scheduler de rappels
+    ReminderService.startScheduler();
   } else {
     console.warn(
       "Configuration email non définie - les emails ne seront pas envoyés",

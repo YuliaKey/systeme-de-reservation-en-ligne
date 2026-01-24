@@ -103,6 +103,10 @@ router.post(
       .notEmpty()
       .isISO8601()
       .withMessage("endTime est requis et doit être au format ISO 8601"),
+    body("numberOfPeople")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("numberOfPeople doit être un entier >= 1"),
     body("notes")
       .optional()
       .isString()
@@ -135,6 +139,10 @@ router.put(
       .optional()
       .isISO8601()
       .withMessage("endTime doit être au format ISO 8601"),
+    body("numberOfPeople")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("numberOfPeople doit être un entier >= 1"),
     body("notes")
       .optional()
       .isString()

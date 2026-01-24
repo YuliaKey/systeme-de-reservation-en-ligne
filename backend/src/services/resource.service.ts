@@ -134,7 +134,7 @@ export class ResourceService {
         data.location || null,
         data.city,
         data.capacity,
-        data.images ? JSON.stringify(data.images) : '[]',
+        data.images ? JSON.stringify(data.images) : "[]",
         data.pricePerHour || null,
         data.amenities ? JSON.stringify(data.amenities) : null,
         JSON.stringify(data.availability),
@@ -158,12 +158,14 @@ export class ResourceService {
     // Si le nom change, vérifier l'unicité
     if (data.name) {
       const existing = await pool.query(
-        "SELECT id FROM resources WHERE name = $1 AND id != $2",
+        "SELECT id, name FROM resources WHERE LOWER(name) = LOWER($1) AND id != $2",
         [data.name, id],
       );
 
       if (existing.rows.length > 0) {
-        throw new ConflictError("Une ressource avec ce nom existe déjà");
+        throw new ConflictError(
+          `Une ressource avec le nom "${existing.rows[0].name}" existe déjà`,
+        );
       }
     }
 
@@ -451,9 +453,21 @@ export class ResourceService {
       const startHour = startTime.getHours() + startTime.getMinutes() / 60;
       const endHour = endTime.getHours() + endTime.getMinutes() / 60;
 
+      // Helper to parse time (handles both string "HH:MM" and number formats)
+      const parseTime = (time: string | number): number => {
+        if (typeof time === "number") return time;
+        if (typeof time === "string") {
+          const [hours, minutes] = time.split(":").map(Number);
+          return hours + minutes / 60;
+        }
+        return 0;
+      };
+
       let isWithinRange = false;
       for (const range of rules.timeRanges) {
-        if (startHour >= range.start && endHour <= range.end) {
+        const rangeStart = parseTime(range.start);
+        const rangeEnd = parseTime(range.end);
+        if (startHour >= rangeStart && endHour <= rangeEnd) {
           isWithinRange = true;
           break;
         }
@@ -462,6 +476,10 @@ export class ResourceService {
       if (!isWithinRange) {
         const ranges = rules.timeRanges
           .map((r) => {
+            // Format time for display (handles both formats)
+            if (typeof r.start === "string" && typeof r.end === "string") {
+              return `${r.start} - ${r.end}`;
+            }
             const startH = Math.floor(r.start);
             const startM = Math.round((r.start - startH) * 60);
             const endH = Math.floor(r.end);

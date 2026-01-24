@@ -493,15 +493,18 @@ export class ReservationService {
     action: "created" | "updated" | "cancelled",
   ): Promise<void> {
     try {
+      // Handle both camelCase and snake_case from database
+      const resourceId =
+        (reservation as any).resource_id || reservation.resourceId;
+      const userId = (reservation as any).user_id || reservation.userId;
+
       // Récupérer les informations de la ressource
-      const resource = await ResourceService.getResourceById(
-        reservation.resourceId,
-      );
+      const resource = await ResourceService.getResourceById(resourceId);
 
       // Récupérer les informations de l'utilisateur
       const userResult = await pool.query<User>(
         "SELECT * FROM users WHERE id = $1",
-        [reservation.userId],
+        [userId],
       );
 
       if (userResult.rows.length === 0) {

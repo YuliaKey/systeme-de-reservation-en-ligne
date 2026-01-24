@@ -5,42 +5,25 @@ import { ArrowLeft, Calendar, Clock, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { reservationsService, resourcesService } from "../services";
 import { Loading, ErrorState } from "../components/ui";
-import type {
-  CreateReservationRequest,
-  DbTimeRange,
-  TimeRange,
-} from "../types";
+import type { CreateReservationRequest, TimeRange } from "../types";
 
-const parseTimeValue = (value: string | number): number => {
-  if (typeof value === "number") return value;
-  if (value.includes(":")) {
-    const [hours, minutes] = value.split(":").map(Number);
-    return hours + minutes / 60;
-  }
-  return parseFloat(value);
+const parseTimeToDecimal = (time: string): number => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours + minutes / 60;
 };
 
-const formatTimeRange = (range: DbTimeRange | TimeRange): string => {
-  const start = parseTimeValue(range.start);
-  const end = parseTimeValue(range.end);
-
-  const formatHour = (hour: number) => {
-    const h = Math.floor(hour);
-    const m = Math.round((hour - h) * 60);
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-  };
-
-  return `${formatHour(start)} - ${formatHour(end)}`;
+const formatTimeRange = (range: TimeRange): string => {
+  // Data comes as strings like "08:00" and "20:00"
+  return `${range.start} - ${range.end}`;
 };
 
 const isWithinTimeRange = (
   startHour: number,
   endHour: number,
-  range: DbTimeRange | TimeRange,
+  range: TimeRange,
 ): boolean => {
-  const rangeStart = parseTimeValue(range.start);
-  const rangeEnd = parseTimeValue(range.end);
-
+  const rangeStart = parseTimeToDecimal(range.start);
+  const rangeEnd = parseTimeToDecimal(range.end);
   return startHour >= rangeStart && endHour <= rangeEnd;
 };
 
@@ -71,17 +54,26 @@ export function CreateReservationPage() {
       navigate("/reservations");
     },
     onError: (error: any) => {
+      console.log("Full error:", error);
+      console.log("Error response:", error.response);
+      console.log("Error response data:", error.response?.data);
+
+      const errorData = error.response?.data?.error;
       const errorMessage =
-        error.response?.data?.error?.message ||
-        error.response?.data?.error ||
+        errorData?.message ||
         error.response?.data?.message ||
         error.message ||
         "Erreur lors de la création de la réservation";
-      toast.error(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : JSON.stringify(errorMessage),
-      );
+
+      // Show validation details if available
+      if (errorData?.details && Object.keys(errorData.details).length > 0) {
+        const detailsStr = Object.entries(errorData.details)
+          .map(([field, msg]) => `${field}: ${msg}`)
+          .join(", ");
+        toast.error(`${errorMessage}\n${detailsStr}`);
+      } else {
+        toast.error(errorMessage);
+      }
     },
   });
 
@@ -91,6 +83,10 @@ export function CreateReservationPage() {
       setValidationError(null);
       return;
     }
+
+    // Debug: log resource availability structure
+    console.log("Resource availability:", resource.availability);
+    console.log("Time ranges:", resource.availability?.timeRanges);
 
     const startDateTime = new Date(`${startDate}T${startTime}:00`);
     const endDateTime = new Date(`${endDate}T${endTime}:00`);

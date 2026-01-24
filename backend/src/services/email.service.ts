@@ -61,17 +61,21 @@ export class EmailService {
     reservation: Reservation,
     resource: Resource,
   ): Promise<EmailNotification> {
+    const userName = (user as any).full_name || user.fullName || user.email;
+    const startTime = (reservation as any).start_time || reservation.startTime;
+    const endTime = (reservation as any).end_time || reservation.endTime;
+
     const subject = `Confirmation de réservation - ${resource.name}`;
     const html = `
       <h2>Réservation confirmée</h2>
-      <p>Bonjour ${user.fullName},</p>
+      <p>Bonjour ${userName},</p>
       <p>Votre réservation a été confirmée avec succès.</p>
       
       <h3>Détails de la réservation</h3>
       <ul>
         <li><strong>Ressource:</strong> ${resource.name}</li>
         <li><strong>Lieu:</strong> ${resource.location || "N/A"}</li>
-        <li><strong>Date et heure:</strong> ${new Date(reservation.startTime).toLocaleString("fr-FR")} - ${new Date(reservation.endTime).toLocaleString("fr-FR")}</li>
+        <li><strong>Date et heure:</strong> ${new Date(startTime).toLocaleString("fr-FR")} - ${new Date(endTime).toLocaleString("fr-FR")}</li>
         <li><strong>Numéro de réservation:</strong> ${reservation.id}</li>
       </ul>
       
@@ -115,16 +119,21 @@ export class EmailService {
     reservation: Reservation,
     resource: Resource,
   ): Promise<EmailNotification> {
+    // Handle both camelCase and snake_case
+    const userName = (user as any).full_name || user.fullName || user.email;
+    const startTime = (reservation as any).start_time || reservation.startTime;
+    const endTime = (reservation as any).end_time || reservation.endTime;
+
     const subject = `Modification de réservation - ${resource.name}`;
     const html = `
       <h2>Réservation modifiée</h2>
-      <p>Bonjour ${user.fullName},</p>
+      <p>Bonjour ${userName},</p>
       <p>Votre réservation a été modifiée.</p>
       
       <h3>Nouveaux détails</h3>
       <ul>
         <li><strong>Ressource:</strong> ${resource.name}</li>
-        <li><strong>Nouvelle date:</strong> ${new Date(reservation.startTime).toLocaleString("fr-FR")} - ${new Date(reservation.endTime).toLocaleString("fr-FR")}</li>
+        <li><strong>Nouvelle date:</strong> ${new Date(startTime).toLocaleString("fr-FR")} - ${new Date(endTime).toLocaleString("fr-FR")}</li>
         <li><strong>Numéro de réservation:</strong> ${reservation.id}</li>
       </ul>
       
@@ -166,20 +175,25 @@ export class EmailService {
     reservation: Reservation,
     resource: Resource,
   ): Promise<EmailNotification> {
+    // Handle both camelCase and snake_case
+    const userName = (user as any).full_name || user.fullName || user.email;
+    const startTime = (reservation as any).start_time || reservation.startTime;
+    const endTime = (reservation as any).end_time || reservation.endTime;
+
     const subject = `Annulation de réservation - ${resource.name}`;
     const html = `
       <h2>Réservation annulée</h2>
-      <p>Bonjour ${user.fullName},</p>
+      <p>Bonjour ${userName},</p>
       <p>Votre réservation a été annulée.</p>
       
       <h3>Détails de la réservation annulée</h3>
       <ul>
         <li><strong>Ressource:</strong> ${resource.name}</li>
-        <li><strong>Date:</strong> ${new Date(reservation.startTime).toLocaleString("fr-FR")} - ${new Date(reservation.endTime).toLocaleString("fr-FR")}</li>
+        <li><strong>Date:</strong> ${new Date(startTime).toLocaleString("fr-FR")} - ${new Date(endTime).toLocaleString("fr-FR")}</li>
         <li><strong>Numéro de réservation:</strong> ${reservation.id}</li>
       </ul>
       
-      <p><a href="${config.frontendUrl}/resources">Faire une nouvelle réservation</a></p>
+      <p><a href="${config.frontendUrl}/rooms">Faire une nouvelle réservation</a></p>
       
       <p>Cordialement,<br>L'équipe ${config.email.from}</p>
     `;
@@ -218,6 +232,11 @@ export class EmailService {
     resource: Resource,
     user: User,
   ): Promise<EmailNotification> {
+    // Handle both camelCase and snake_case
+    const userName = (user as any).full_name || user.fullName || user.email;
+    const startTime = (reservation as any).start_time || reservation.startTime;
+    const endTime = (reservation as any).end_time || reservation.endTime;
+
     const subject = `[Admin] ${action} - ${resource.name}`;
     const html = `
       <h2>Notification administrateur</h2>
@@ -225,13 +244,13 @@ export class EmailService {
       
       <h3>Détails</h3>
       <ul>
-        <li><strong>Utilisateur:</strong> ${user.fullName} (${user.email})</li>
+        <li><strong>Utilisateur:</strong> ${userName} (${user.email})</li>
         <li><strong>Ressource:</strong> ${resource.name}</li>
-        <li><strong>Date:</strong> ${new Date(reservation.startTime).toLocaleString("fr-FR")} - ${new Date(reservation.endTime).toLocaleString("fr-FR")}</li>
+        <li><strong>Date:</strong> ${new Date(startTime).toLocaleString("fr-FR")} - ${new Date(endTime).toLocaleString("fr-FR")}</li>
         <li><strong>ID réservation:</strong> ${reservation.id}</li>
       </ul>
       
-      <p><a href="${config.frontendUrl}/admin/reservations/${reservation.id}">Voir dans le dashboard admin</a></p>
+      <p><a href="${config.frontendUrl}/reservations/${reservation.id}">Voir dans le dashboard admin</a></p>
     `;
 
     const result = await sendEmail({
@@ -263,10 +282,13 @@ export class EmailService {
    * Envoyer un email de suppression de compte
    */
   static async sendAccountDeletedEmail(user: User): Promise<EmailNotification> {
+    // Handle both camelCase and snake_case
+    const userName = (user as any).full_name || user.fullName || user.email;
+
     const subject = "Confirmation de suppression de compte";
     const html = `
       <h2>Compte supprimé</h2>
-      <p>Bonjour ${user.fullName},</p>
+      <p>Bonjour ${userName},</p>
       <p>Votre compte a été supprimé avec succès comme demandé.</p>
       <p>Toutes vos données personnelles et réservations ont été supprimées de notre système.</p>
       <p>Nous espérons vous revoir bientôt!</p>
@@ -294,6 +316,120 @@ export class EmailService {
       type: "account_deleted",
       status: result.success ? "sent" : "failed",
       recipient: user.email,
+      sentAt: result.success ? new Date() : undefined,
+      errorMessage: result.error,
+    };
+  }
+
+  /**
+   * Envoyer un email de rappel avant une réservation (J-1 ou H-1)
+   */
+  static async sendReservationReminderEmail(
+    user: User,
+    reservation: Reservation,
+    resource: Resource,
+    hoursUntil: number,
+  ): Promise<EmailNotification> {
+    // Handle both camelCase and snake_case
+    const userName = (user as any).full_name || user.fullName || user.email;
+    const startTime = (reservation as any).start_time || reservation.startTime;
+    const endTime = (reservation as any).end_time || reservation.endTime;
+
+    const isToday = hoursUntil <= 24;
+    const timeText = isToday
+      ? `dans ${hoursUntil} heure${hoursUntil > 1 ? "s" : ""}`
+      : "demain";
+
+    const subject = `Rappel - Votre réservation ${timeText} - ${resource.name}`;
+    const html = `
+      <h2>Rappel de réservation</h2>
+      <p>Bonjour ${userName},</p>
+      <p>Ceci est un rappel pour votre réservation à venir ${timeText}.</p>
+      
+      <h3>Détails de la réservation</h3>
+      <ul>
+        <li><strong>Ressource:</strong> ${resource.name}</li>
+        <li><strong>Lieu:</strong> ${resource.location || "N/A"}</li>
+        <li><strong>Date et heure:</strong> ${new Date(startTime).toLocaleString("fr-FR")} - ${new Date(endTime).toLocaleString("fr-FR")}</li>
+        <li><strong>Début:</strong> <strong>${new Date(startTime).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</strong></li>
+      </ul>
+      
+      ${reservation.notes ? `<p><strong>Notes:</strong> ${reservation.notes}</p>` : ""}
+      
+      <p><a href="${config.frontendUrl}/reservations/${reservation.id}">Voir ma réservation</a></p>
+      
+      <p>À bientôt !<br>L'équipe ${config.email.from}</p>
+    `;
+
+    const result = await sendEmail({
+      to: user.email,
+      subject,
+      html,
+      text: `Rappel: réservation ${timeText} pour ${resource.name}`,
+    });
+
+    await this.logEmailNotification(
+      reservation.id,
+      "reservation_reminder",
+      user.email,
+      result.success ? "sent" : "failed",
+      result.error,
+      result.attempts,
+    );
+
+    return {
+      type: "reservation_reminder",
+      status: result.success ? "sent" : "failed",
+      recipient: user.email,
+      sentAt: result.success ? new Date() : undefined,
+      errorMessage: result.error,
+    };
+  }
+
+  /**
+   * Envoyer une alerte pour incident critique à l'admin
+   */
+  static async sendCriticalIncidentEmail(
+    incidentType: string,
+    details: string,
+    affectedUsers?: number,
+  ): Promise<EmailNotification> {
+    const subject = `[CRITIQUE] ${incidentType}`;
+    const html = `
+      <h2 style="color: #dc2626;">⚠️ Incident Critique</h2>
+      <p><strong>Type:</strong> ${incidentType}</p>
+      <p><strong>Date:</strong> ${new Date().toLocaleString("fr-FR")}</p>
+      
+      <h3>Détails</h3>
+      <p>${details}</p>
+      
+      ${affectedUsers ? `<p><strong>Utilisateurs affectés:</strong> ${affectedUsers}</p>` : ""}
+      
+      <p style="color: #dc2626;"><strong>Action requise immédiatement.</strong></p>
+      
+      <p><a href="${config.frontendUrl}/admin">Accéder au dashboard admin</a></p>
+    `;
+
+    const result = await sendEmail({
+      to: config.admin.email,
+      subject,
+      html,
+      text: `INCIDENT CRITIQUE: ${incidentType} - ${details}`,
+    });
+
+    await this.logEmailNotification(
+      null,
+      "admin_notification",
+      config.admin.email,
+      result.success ? "sent" : "failed",
+      result.error,
+      result.attempts,
+    );
+
+    return {
+      type: "admin_notification",
+      status: result.success ? "sent" : "failed",
+      recipient: config.admin.email,
       sentAt: result.success ? new Date() : undefined,
       errorMessage: result.error,
     };

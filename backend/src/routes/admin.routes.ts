@@ -131,4 +131,48 @@ router.get(
   AdminController.getEmailLogs,
 );
 
+/**
+ * POST /api/admin/test-reminder
+ * Envoyer un email de rappel de test
+ * Requires: Admin
+ */
+router.post(
+  "/test-reminder",
+  requireAdmin,
+  [
+    body("reservationId")
+      .notEmpty()
+      .isUUID()
+      .withMessage("ID de réservation valide requis"),
+    validate,
+  ],
+  AdminController.sendTestReminder,
+);
+
+/**
+ * POST /api/admin/test-critical-incident
+ * Envoyer un email d'alerte critique de test
+ * Requires: Admin
+ */
+router.post(
+  "/test-critical-incident",
+  requireAdmin,
+  [
+    body("incidentType")
+      .notEmpty()
+      .isString()
+      .withMessage("Type d'incident requis"),
+    body("details").notEmpty().isString().withMessage("Détails requis"),
+    validate,
+  ],
+  AdminController.sendTestCriticalIncident,
+);
+
+/**
+ * POST /api/admin/check-reminders
+ * Vérifier manuellement et envoyer les rappels (pour test/debug)
+ * Requires: Admin
+ */
+router.post("/check-reminders", requireAdmin, AdminController.checkReminders);
+
 export default router;

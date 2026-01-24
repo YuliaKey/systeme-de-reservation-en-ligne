@@ -35,14 +35,8 @@ export interface AvailabilityRules {
 }
 
 export interface TimeRange {
-  start: string; // format HH:MM
-  end: string; // format HH:MM
-}
-
-// Types pour la base de données (format différent)
-export interface DbTimeRange {
-  start: string | number; // Peut être "08:00" ou 8.0 (heures décimales)
-  end: string | number; // Peut être "20:00" ou 20.0
+  start: string; // Format HH:MM (ex: "09:30")
+  end: string; // Format HH:MM (ex: "18:00")
 }
 
 export type ReservationStatus = "active" | "cancelled" | "modified" | "passed";

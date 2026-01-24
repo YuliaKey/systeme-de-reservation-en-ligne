@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { resourcesService } from "../services";
 import { Loading, ErrorState } from "../components/ui";
-import type { Resource, DbTimeRange, TimeRange } from "../types";
+import type { Resource, TimeRange } from "../types";
 
 const amenityIcons: Record<string, any> = {
   wifi: Wifi,
@@ -242,7 +242,7 @@ export function ResourceDetailPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {resource.availability.timeRanges.map(
-                      (range: DbTimeRange | TimeRange, index: number) => (
+                      (range: TimeRange, index: number) => (
                         <span key={index} className="badge badge-blue">
                           {formatTimeRange(range)}
                         </span>

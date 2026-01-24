@@ -1,52 +1,35 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, Clock, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { reservationsService, resourcesService } from "../services";
 import { Loading, ErrorState } from "../components/ui";
-import type {
-  UpdateReservationRequest,
-  DbTimeRange,
-  TimeRange,
-} from "../types";
+import type { UpdateReservationRequest, TimeRange } from "../types";
 
-const parseTimeValue = (value: string | number): number => {
-  if (typeof value === "number") return value;
-  if (value.includes(":")) {
-    const [hours, minutes] = value.split(":").map(Number);
-    return hours + minutes / 60;
-  }
-  return parseFloat(value);
+const parseTimeToDecimal = (time: string): number => {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours + minutes / 60;
 };
 
-const formatTimeRange = (range: DbTimeRange | TimeRange): string => {
-  const start = parseTimeValue(range.start);
-  const end = parseTimeValue(range.end);
-
-  const formatHour = (hour: number) => {
-    const h = Math.floor(hour);
-    const m = Math.round((hour - h) * 60);
-    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-  };
-
-  return `${formatHour(start)} - ${formatHour(end)}`;
+const formatTimeRange = (range: TimeRange): string => {
+  return `${range.start} - ${range.end}`;
 };
 
 const isWithinTimeRange = (
   startHour: number,
   endHour: number,
-  range: DbTimeRange | TimeRange,
+  range: TimeRange,
 ): boolean => {
-  const rangeStart = parseTimeValue(range.start);
-  const rangeEnd = parseTimeValue(range.end);
-
+  const rangeStart = parseTimeToDecimal(range.start);
+  const rangeEnd = parseTimeToDecimal(range.end);
   return startHour >= rangeStart && endHour <= rangeEnd;
 };
 
 export function EditReservationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -183,6 +166,9 @@ export function EditReservationPage() {
       reservationsService.update(id!, data),
     onSuccess: () => {
       toast.success("Réservation modifiée avec succès");
+      // Invalider le cache pour forcer le rechargement
+      queryClient.invalidateQueries({ queryKey: ["reservation", id] });
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
       navigate(`/reservations/${id}`);
     },
     onError: () => {
