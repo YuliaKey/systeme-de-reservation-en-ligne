@@ -8,6 +8,21 @@ import type {
 } from "../types";
 
 export const resourcesService = {
+  // Search available rooms by city and dates
+  searchAvailable: async (
+    city: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<Resource[]> => {
+    const response = await api.get<{ resources: Resource[]; total: number }>(
+      "/resources/search",
+      {
+        params: { city, startTime, endTime },
+      },
+    );
+    return response.data.resources;
+  },
+
   // Get all rooms
   getAll: async (): Promise<Resource[]> => {
     const response = await api.get<{ resources: Resource[]; total: number }>(

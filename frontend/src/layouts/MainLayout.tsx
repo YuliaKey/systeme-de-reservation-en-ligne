@@ -12,12 +12,16 @@ import { cn } from "../utils";
 
 export function MainLayout() {
   const location = useLocation();
-  const { isAdmin } = useCurrentUser();
+  const { isAdmin, isLoading } = useCurrentUser();
 
   const isActive = (path: string) => location.pathname === path;
 
   const userNavLinks = [
-    { path: "/dashboard", label: "Tableau de bord", icon: Home },
+    {
+      path: "/dashboard",
+      label: "Tableau de bord",
+      icon: Home,
+    },
     { path: "/rooms", label: "Salles", icon: Building2 },
     { path: "/reservations", label: "Mes réservations", icon: Calendar },
     { path: "/history", label: "Historique", icon: History },
@@ -40,22 +44,24 @@ export function MainLayout() {
             {/* Navigation */}
             <SignedIn>
               <nav className="hidden md:flex items-center space-x-1">
-                {userNavLinks.map(({ path, label, icon: Icon }) => (
-                  <Link
-                    key={path}
-                    to={path}
-                    className={cn(
-                      "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                      isActive(path)
-                        ? "bg-primary-50 text-primary-700"
-                        : "text-gray-700 hover:bg-gray-100",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </Link>
-                ))}
-                {isAdmin &&
+                {!isLoading &&
+                  userNavLinks.map(({ path, label, icon: Icon }) => (
+                    <Link
+                      key={path}
+                      to={path}
+                      className={cn(
+                        "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                        isActive(path)
+                          ? "bg-primary-50 text-primary-700"
+                          : "text-gray-700 hover:bg-gray-100",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+                {!isLoading &&
+                  isAdmin &&
                   adminNavLinks.map(({ path, label, icon: Icon }) => (
                     <Link
                       key={path}

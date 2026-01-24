@@ -27,7 +27,7 @@ export function useCurrentUser() {
     clerkUser,
     isLoading: !isClerkLoaded || isDbUserLoading,
     isSignedIn,
-    isAdmin: dbUser?.isAdmin || false,
+    isAdmin: dbUser?.role === "admin",
     error,
     refetch,
   };

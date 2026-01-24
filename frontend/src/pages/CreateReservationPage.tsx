@@ -20,19 +20,9 @@ const parseTimeValue = (value: string | number): number => {
   return parseFloat(value);
 };
 
-const isDbTimeRange = (
-  range: DbTimeRange | TimeRange,
-): range is DbTimeRange => {
-  return "start" in range && "end" in range;
-};
-
 const formatTimeRange = (range: DbTimeRange | TimeRange): string => {
-  const start = isDbTimeRange(range)
-    ? parseTimeValue(range.start)
-    : parseTimeValue(range.startTime);
-  const end = isDbTimeRange(range)
-    ? parseTimeValue(range.end)
-    : parseTimeValue(range.endTime);
+  const start = parseTimeValue(range.start);
+  const end = parseTimeValue(range.end);
 
   const formatHour = (hour: number) => {
     const h = Math.floor(hour);
@@ -48,42 +38,10 @@ const isWithinTimeRange = (
   endHour: number,
   range: DbTimeRange | TimeRange,
 ): boolean => {
-  const rangeStart = isDbTimeRange(range)
-    ? parseTimeValue(range.start)
-    : parseTimeValue(range.startTime);
-  const rangeEnd = isDbTimeRange(range)
-    ? parseTimeValue(range.end)
-    : parseTimeValue(range.endTime);
+  const rangeStart = parseTimeValue(range.start);
+  const rangeEnd = parseTimeValue(range.end);
 
   return startHour >= rangeStart && endHour <= rangeEnd;
-};
-
-const getMinDuration = (
-  rules:
-    | { minDurationMinutes?: number; maxDurationMinutes?: number }
-    | { minDuration?: number; maxDuration?: number },
-): number | undefined => {
-  if ("minDurationMinutes" in rules) {
-    return rules.minDurationMinutes;
-  }
-  if ("minDuration" in rules) {
-    return rules.minDuration;
-  }
-  return undefined;
-};
-
-const getMaxDuration = (
-  rules:
-    | { minDurationMinutes?: number; maxDurationMinutes?: number }
-    | { minDuration?: number; maxDuration?: number },
-): number | undefined => {
-  if ("maxDurationMinutes" in rules) {
-    return rules.maxDurationMinutes;
-  }
-  if ("maxDuration" in rules) {
-    return rules.maxDuration;
-  }
-  return undefined;
 };
 
 export function CreateReservationPage() {
@@ -151,10 +109,8 @@ export function CreateReservationPage() {
     const durationMinutes =
       (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60);
 
-    const rules = resource.rules || resource.availabilityRules;
-
-    if (rules) {
-      const minDuration = getMinDuration(rules);
+    if (resource.availability) {
+      const minDuration = resource.availability.minDuration;
 
       if (minDuration && durationMinutes < minDuration) {
         const hours = Math.floor(minDuration / 60);
@@ -165,7 +121,7 @@ export function CreateReservationPage() {
         return;
       }
 
-      const maxDuration = getMaxDuration(rules);
+      const maxDuration = resource.availability.maxDuration;
 
       if (maxDuration && durationMinutes > maxDuration) {
         const hours = Math.floor(maxDuration / 60);
@@ -178,10 +134,12 @@ export function CreateReservationPage() {
     }
 
     // Vérifier le jour de la semaine
-    const availability = resource.availability || resource.availabilityRules;
-    if (availability?.daysOfWeek && availability.daysOfWeek.length > 0) {
+    if (
+      resource.availability?.daysOfWeek &&
+      resource.availability.daysOfWeek.length > 0
+    ) {
       const dayOfWeek = startDateTime.getDay();
-      if (!availability.daysOfWeek.includes(dayOfWeek)) {
+      if (!resource.availability.daysOfWeek.includes(dayOfWeek)) {
         const daysNames = [
           "Dimanche",
           "Lundi",
@@ -191,8 +149,8 @@ export function CreateReservationPage() {
           "Vendredi",
           "Samedi",
         ];
-        const allowedDays = availability.daysOfWeek
-          .map((d) => daysNames[d])
+        const allowedDays = resource.availability.daysOfWeek
+          .map((d: number) => daysNames[d])
           .join(", ");
         setValidationError(
           `Cette salle n'est disponible que les jours suivants: ${allowedDays}`,
@@ -202,13 +160,16 @@ export function CreateReservationPage() {
     }
 
     // Vérifier les plages horaires
-    if (availability?.timeRanges && availability.timeRanges.length > 0) {
+    if (
+      resource.availability?.timeRanges &&
+      resource.availability.timeRanges.length > 0
+    ) {
       const startHour =
         startDateTime.getHours() + startDateTime.getMinutes() / 60;
       const endHour = endDateTime.getHours() + endDateTime.getMinutes() / 60;
 
       let withinRange = false;
-      for (const range of availability.timeRanges) {
+      for (const range of resource.availability.timeRanges) {
         if (isWithinTimeRange(startHour, endHour, range)) {
           withinRange = true;
           break;
@@ -216,7 +177,9 @@ export function CreateReservationPage() {
       }
 
       if (!withinRange) {
-        const ranges = availability.timeRanges.map(formatTimeRange).join(", ");
+        const ranges = resource.availability.timeRanges
+          .map(formatTimeRange)
+          .join(", ");
         setValidationError(
           `Cette salle n'est disponible que pendant: ${ranges}`,
         );
@@ -415,52 +378,37 @@ export function CreateReservationPage() {
           </div>
 
           {/* Duration info */}
-          {(resource.rules ||
-            resource.availabilityRules ||
-            resource.availability) && (
+          {resource.availability && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-blue-900 mb-2">
                 Règles de réservation
               </p>
-              {(resource.rules?.minDurationMinutes ||
-                resource.availabilityRules?.minDuration) && (
+              {resource.availability.minDuration && (
                 <p className="text-sm text-blue-700">
-                  • Durée minimale :{" "}
-                  {resource.rules?.minDurationMinutes ||
-                    resource.availabilityRules?.minDuration}{" "}
-                  minutes
+                  • Durée minimale : {resource.availability.minDuration} minutes
                 </p>
               )}
-              {(resource.rules?.maxDurationMinutes ||
-                resource.availabilityRules?.maxDuration) && (
+              {resource.availability.maxDuration && (
                 <p className="text-sm text-blue-700">
-                  • Durée maximale :{" "}
-                  {resource.rules?.maxDurationMinutes ||
-                    resource.availabilityRules?.maxDuration}{" "}
-                  minutes
+                  • Durée maximale : {resource.availability.maxDuration} minutes
                 </p>
               )}
-              {(resource.availability?.daysOfWeek ||
-                resource.availabilityRules?.daysOfWeek) && (
+              {resource.availability.daysOfWeek && (
                 <p className="text-sm text-blue-700">
                   • Jours disponibles :{" "}
-                  {(resource.availability?.daysOfWeek ||
-                    resource.availabilityRules?.daysOfWeek)!
+                  {resource.availability.daysOfWeek
                     .map(
-                      (d) =>
+                      (d: number) =>
                         ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][d],
                     )
                     .join(", ")}
                 </p>
               )}
-              {(resource.availability?.timeRanges ||
-                resource.availabilityRules?.timeRanges) &&
-                (resource.availability?.timeRanges ||
-                  resource.availabilityRules?.timeRanges)!.length > 0 && (
+              {resource.availability.timeRanges &&
+                resource.availability.timeRanges.length > 0 && (
                   <p className="text-sm text-blue-700">
                     • Horaires :{" "}
-                    {(resource.availability?.timeRanges ||
-                      resource.availabilityRules?.timeRanges)!
+                    {resource.availability.timeRanges
                       .map(formatTimeRange)
                       .join(", ")}
                   </p>

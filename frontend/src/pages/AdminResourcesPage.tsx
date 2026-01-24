@@ -108,7 +108,19 @@ export function AdminResourcesPage() {
         <div className="space-y-4">
           {resources.map((resource) => (
             <div key={resource.id} className="card">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
+                {resource.images && resource.images.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <img
+                      src={resource.images[0]}
+                      alt={resource.name}
+                      className="w-32 h-32 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -127,17 +139,77 @@ export function AdminResourcesPage() {
                     </p>
                   )}
 
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     {resource.location && (
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
+                      <div className="flex items-center text-gray-600">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="font-medium mr-1">Localisation:</span>
                         {resource.location}
                       </div>
                     )}
                     {resource.capacity && (
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
+                      <div className="flex items-center text-gray-600">
+                        <Users className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="font-medium mr-1">Capacité:</span>
                         {resource.capacity} personnes
+                      </div>
+                    )}
+                    {resource.pricePerHour && (
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium mr-1">Prix/heure:</span>
+                        {resource.pricePerHour}€
+                      </div>
+                    )}
+                    {resource.amenities && resource.amenities.length > 0 && (
+                      <div className="flex items-start text-gray-600 md:col-span-2">
+                        <span className="font-medium mr-1">Équipements:</span>
+                        <span>{resource.amenities.join(", ")}</span>
+                      </div>
+                    )}
+                    {resource.availability?.daysOfWeek && (
+                      <div className="flex items-start text-gray-600 md:col-span-2">
+                        <span className="font-medium mr-1">
+                          Jours disponibles:
+                        </span>
+                        <span>
+                          {resource.availability.daysOfWeek
+                            .map(
+                              (day) =>
+                                [
+                                  "Dim",
+                                  "Lun",
+                                  "Mar",
+                                  "Mer",
+                                  "Jeu",
+                                  "Ven",
+                                  "Sam",
+                                ][day],
+                            )
+                            .join(", ")}
+                        </span>
+                      </div>
+                    )}
+                    {resource.availability?.timeRanges &&
+                      resource.availability.timeRanges.length > 0 && (
+                        <div className="flex items-start text-gray-600 md:col-span-2">
+                          <span className="font-medium mr-1">Horaires:</span>
+                          <span>
+                            {resource.availability.timeRanges
+                              .map((range) => `${range.start} - ${range.end}`)
+                              .join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    {resource.availability?.minDuration && (
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium mr-1">Durée min:</span>
+                        {resource.availability.minDuration} min
+                      </div>
+                    )}
+                    {resource.availability?.maxDuration && (
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium mr-1">Durée max:</span>
+                        {resource.availability.maxDuration} min
                       </div>
                     )}
                   </div>
@@ -197,25 +269,27 @@ export function AdminResourcesPage() {
 
       {/* Create modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-3xl w-full my-8">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Nouvelle salle
-              </h2>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <ResourceForm
-                onSubmit={(data) => createMutation.mutate(data)}
-                onCancel={() => setShowCreateModal(false)}
-                isSubmitting={createMutation.isPending}
-              />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white rounded-lg max-w-3xl w-full my-8">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Nouvelle salle
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <ResourceForm
+                  onSubmit={(data) => createMutation.mutate(data)}
+                  onCancel={() => setShowCreateModal(false)}
+                  isSubmitting={createMutation.isPending}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -223,28 +297,30 @@ export function AdminResourcesPage() {
 
       {/* Edit modal */}
       {editingResource && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-3xl w-full my-8">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Modifier la salle
-              </h2>
-              <button
-                onClick={() => setEditingResource(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <ResourceForm
-                resource={editingResource}
-                onSubmit={(data) =>
-                  updateMutation.mutate({ id: editingResource.id, data })
-                }
-                onCancel={() => setEditingResource(null)}
-                isSubmitting={updateMutation.isPending}
-              />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="bg-white rounded-lg max-w-3xl w-full my-8">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Modifier la salle
+                </h2>
+                <button
+                  onClick={() => setEditingResource(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <ResourceForm
+                  resource={editingResource}
+                  onSubmit={(data) =>
+                    updateMutation.mutate({ id: editingResource.id, data })
+                  }
+                  onCancel={() => setEditingResource(null)}
+                  isSubmitting={updateMutation.isPending}
+                />
+              </div>
             </div>
           </div>
         </div>

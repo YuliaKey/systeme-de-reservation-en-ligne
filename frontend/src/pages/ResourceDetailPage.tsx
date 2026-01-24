@@ -28,11 +28,11 @@ const amenityIcons: Record<string, any> = {
   casiers: Package,
 };
 
-const formatTimeRange = (range: DbTimeRange | TimeRange): string => {
-  if ("start" in range && "end" in range) {
+const formatTimeRange = (range: any): string => {
+  if (range.start && range.end) {
     return `${range.start} - ${range.end}`;
   }
-  return `${range.startTime} - ${range.endTime}`;
+  return "N/A";
 };
 
 export function ResourceDetailPage() {
@@ -169,19 +169,15 @@ export function ResourceDetailPage() {
         )}
 
         {/* Availability rules */}
-        {(resource.rules ||
-          resource.availability ||
-          resource.availabilityRules) && (
+        {resource.availability && (
           <div className="border-t border-gray-200 pt-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Règles de disponibilité
             </h2>
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Durées min/max depuis rules ou availabilityRules */}
-              {(resource.rules?.minDurationMinutes ||
-                resource.rules?.maxDurationMinutes ||
-                resource.availabilityRules?.minDuration ||
-                resource.availabilityRules?.maxDuration) && (
+              {/* Durées min/max */}
+              {(resource.availability.minDuration ||
+                resource.availability.maxDuration) && (
                 <div className="flex items-start text-gray-600">
                   <Clock className="h-5 w-5 mr-3 text-gray-400 mt-0.5" />
                   <div>
@@ -189,27 +185,17 @@ export function ResourceDetailPage() {
                       Durée de réservation
                     </div>
                     <div className="font-medium">
-                      {(resource.rules?.minDurationMinutes ||
-                        resource.availabilityRules?.minDuration) && (
+                      {resource.availability.minDuration && (
                         <span>
-                          Min:{" "}
-                          {resource.rules?.minDurationMinutes ||
-                            resource.availabilityRules?.minDuration}{" "}
-                          min
+                          Min: {resource.availability.minDuration} min
                         </span>
                       )}
-                      {(resource.rules?.minDurationMinutes ||
-                        resource.availabilityRules?.minDuration) &&
-                        (resource.rules?.maxDurationMinutes ||
-                          resource.availabilityRules?.maxDuration) &&
+                      {resource.availability.minDuration &&
+                        resource.availability.maxDuration &&
                         " - "}
-                      {(resource.rules?.maxDurationMinutes ||
-                        resource.availabilityRules?.maxDuration) && (
+                      {resource.availability.maxDuration && (
                         <span>
-                          Max:{" "}
-                          {resource.rules?.maxDurationMinutes ||
-                            resource.availabilityRules?.maxDuration}{" "}
-                          min
+                          Max: {resource.availability.maxDuration} min
                         </span>
                       )}
                     </div>
@@ -218,10 +204,8 @@ export function ResourceDetailPage() {
               )}
 
               {/* Jours disponibles */}
-              {(resource.availability?.daysOfWeek ||
-                resource.availabilityRules?.daysOfWeek) &&
-                (resource.availability?.daysOfWeek ||
-                  resource.availabilityRules?.daysOfWeek)!.length > 0 && (
+              {resource.availability.daysOfWeek &&
+                resource.availability.daysOfWeek.length > 0 && (
                   <div className="flex items-start text-gray-600">
                     <CalendarIcon className="h-5 w-5 mr-3 text-gray-400 mt-0.5" />
                     <div>
@@ -229,9 +213,8 @@ export function ResourceDetailPage() {
                         Jours disponibles
                       </div>
                       <div className="font-medium">
-                        {(resource.availability?.daysOfWeek ||
-                          resource.availabilityRules?.daysOfWeek)!
-                          .map((day) => {
+                        {resource.availability.daysOfWeek
+                          .map((day: number) => {
                             const days = [
                               "Dimanche",
                               "Lundi",
@@ -251,18 +234,15 @@ export function ResourceDetailPage() {
             </div>
 
             {/* Plages horaires */}
-            {(resource.availability?.timeRanges ||
-              resource.availabilityRules?.timeRanges) &&
-              (resource.availability?.timeRanges ||
-                resource.availabilityRules?.timeRanges)!.length > 0 && (
+            {resource.availability.timeRanges &&
+              resource.availability.timeRanges.length > 0 && (
                 <div className="mt-4">
                   <div className="text-sm text-gray-500 mb-2">
                     Plages horaires
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(resource.availability?.timeRanges ||
-                      resource.availabilityRules?.timeRanges)!.map(
-                      (range, index) => (
+                    {resource.availability.timeRanges.map(
+                      (range: DbTimeRange | TimeRange, index: number) => (
                         <span key={index} className="badge badge-blue">
                           {formatTimeRange(range)}
                         </span>

@@ -76,7 +76,7 @@ export function ProfilePage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-1">
               {dbUser.fullName || dbUser.username || "Utilisateur"}
             </h2>
-            {dbUser.isAdmin && (
+            {dbUser.role === "admin" && (
               <span className="badge badge-blue">
                 <Shield className="h-3 w-3 mr-1" />
                 Administrateur

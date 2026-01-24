@@ -23,6 +23,8 @@ const DAYS_OF_WEEK = [
   { value: 0, label: "Dimanche" },
 ];
 
+const CITIES = ["Paris", "Nice", "Lyon", "Bordeaux", "Marseille"];
+
 export function ResourceForm({
   resource,
   onSubmit,
@@ -35,25 +37,29 @@ export function ResourceForm({
     resource?.capacity?.toString() || "",
   );
   const [location, setLocation] = useState(resource?.location || "");
+  const [city, setCity] = useState(resource?.city || "");
+  const [pricePerHour, setPricePerHour] = useState(
+    resource?.pricePerHour?.toString() || "",
+  );
+  const [amenities, setAmenities] = useState(
+    resource?.amenities?.join(", ") || "",
+  );
+  const [images, setImages] = useState(resource?.images?.join(", ") || "");
   const [active, setActive] = useState(resource?.active ?? true);
 
   // Availability rules
   const [minDuration, setMinDuration] = useState(
-    resource?.availabilityRules?.minDuration?.toString() || "",
+    resource?.availability?.minDuration?.toString() || "",
   );
   const [maxDuration, setMaxDuration] = useState(
-    resource?.availabilityRules?.maxDuration?.toString() || "",
+    resource?.availability?.maxDuration?.toString() || "",
   );
   const [selectedDays, setSelectedDays] = useState<number[]>(
-    resource?.availabilityRules?.daysOfWeek || [1, 2, 3, 4, 5],
+    resource?.availability?.daysOfWeek || [1, 2, 3, 4, 5],
   );
   const [timeRanges, setTimeRanges] = useState<
-    { startTime: string; endTime: string }[]
-  >(
-    resource?.availabilityRules?.timeRanges || [
-      { startTime: "09:00", endTime: "18:00" },
-    ],
-  );
+    { start: string; end: string }[]
+  >(resource?.availability?.timeRanges || [{ start: "09:00", end: "18:00" }]);
 
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>
@@ -64,7 +70,7 @@ export function ResourceForm({
   };
 
   const addTimeRange = () => {
-    setTimeRanges([...timeRanges, { startTime: "09:00", endTime: "18:00" }]);
+    setTimeRanges([...timeRanges, { start: "09:00", end: "18:00" }]);
   };
 
   const removeTimeRange = (index: number) => {
@@ -73,7 +79,7 @@ export function ResourceForm({
 
   const updateTimeRange = (
     index: number,
-    field: "startTime" | "endTime",
+    field: "start" | "end",
     value: string,
   ) => {
     const updated = [...timeRanges];
@@ -96,8 +102,22 @@ export function ResourceForm({
       description: description.trim() || undefined,
       capacity: capacity ? parseInt(capacity) : undefined,
       location: location.trim() || undefined,
+      city: city.trim(),
+      pricePerHour: pricePerHour ? parseFloat(pricePerHour) : undefined,
+      amenities: amenities.trim()
+        ? amenities
+            .split(",")
+            .map((a) => a.trim())
+            .filter((a) => a.length > 0)
+        : undefined,
+      images: images.trim()
+        ? images
+            .split(",")
+            .map((url) => url.trim())
+            .filter((url) => url.length > 0)
+        : undefined,
       active,
-      availabilityRules,
+      availability: availabilityRules,
     };
 
     onSubmit(data);
@@ -166,6 +186,71 @@ export function ResourceForm({
                 maxLength={255}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ville *
+            </label>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            >
+              <option value="">Sélectionnez une ville</option>
+              {CITIES.map((cityOption) => (
+                <option key={cityOption} value={cityOption}>
+                  {cityOption}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prix par heure (€)
+              </label>
+              <input
+                type="number"
+                value={pricePerHour}
+                onChange={(e) => setPricePerHour(e.target.value)}
+                min="0"
+                step="0.01"
+                placeholder="ex: 25.50"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Équipements
+              </label>
+              <input
+                type="text"
+                value={amenities}
+                onChange={(e) => setAmenities(e.target.value)}
+                placeholder="WiFi, Projecteur, Tableau blanc (séparés par des virgules)"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Images (URLs)
+              </label>
+              <input
+                type="text"
+                value={images}
+                onChange={(e) => setImages(e.target.value)}
+                placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg (séparées par des virgules)"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Entrez les URLs des images séparées par des virgules
+              </p>
             </div>
           </div>
 
@@ -273,18 +358,18 @@ export function ResourceForm({
               <div key={index} className="flex items-center gap-3">
                 <input
                   type="time"
-                  value={range.startTime}
+                  value={range.start}
                   onChange={(e) =>
-                    updateTimeRange(index, "startTime", e.target.value)
+                    updateTimeRange(index, "start", e.target.value)
                   }
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
                 <span className="text-gray-500">à</span>
                 <input
                   type="time"
-                  value={range.endTime}
+                  value={range.end}
                   onChange={(e) =>
-                    updateTimeRange(index, "endTime", e.target.value)
+                    updateTimeRange(index, "end", e.target.value)
                   }
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />

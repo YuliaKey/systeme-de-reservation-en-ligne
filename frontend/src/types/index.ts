@@ -1,10 +1,12 @@
 export interface User {
   id: string;
-  clerkId: string;
+  clerkId?: string;
   email: string;
   username?: string;
   fullName?: string;
-  isAdmin: boolean;
+  phone?: string | null;
+  role: "admin" | "user";
+  twoFactorEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,19 +17,12 @@ export interface Resource {
   description?: string;
   capacity?: number;
   location?: string;
+  city: string;
   amenities?: string[]; // Équipements disponibles (wifi, écran, visio, etc.)
   pricePerHour?: number; // Prix par heure en euros
   images?: string[]; // URLs des photos de la ressource
   active: boolean;
-  availability?: {
-    daysOfWeek?: number[]; // Jours disponibles (1-7)
-    timeRanges?: Array<DbTimeRange | TimeRange>; // Plages horaires (formats mixtes DB/frontend)
-  };
-  rules?: {
-    minDurationMinutes?: number; // Durée minimale en minutes
-    maxDurationMinutes?: number; // Durée maximale en minutes
-  };
-  availabilityRules?: AvailabilityRules; // DEPRECATED - pour compatibilité
+  availability?: AvailabilityRules; // Règles de disponibilité
   createdAt: string;
   updatedAt: string;
 }
@@ -40,8 +35,8 @@ export interface AvailabilityRules {
 }
 
 export interface TimeRange {
-  startTime: string; // format HH:MM
-  endTime: string; // format HH:MM
+  start: string; // format HH:MM
+  end: string; // format HH:MM
 }
 
 // Types pour la base de données (format différent)
@@ -88,8 +83,12 @@ export interface CreateResourceRequest {
   description?: string;
   capacity?: number;
   location?: string;
+  city: string;
+  pricePerHour?: number;
+  amenities?: string[];
+  images?: string[];
   active?: boolean;
-  availabilityRules?: AvailabilityRules;
+  availability?: AvailabilityRules;
 }
 
 export interface UpdateResourceRequest extends Partial<CreateResourceRequest> {}

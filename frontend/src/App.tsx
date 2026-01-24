@@ -8,7 +8,7 @@ import { HomePage } from "./pages/HomePage";
 import { SignInPage } from "./pages/SignInPage";
 import { SignUpPage } from "./pages/SignUpPage";
 import { DashboardPage } from "./pages/DashboardPage";
-import { SallesListPage } from "./pages/SallesListPage";
+import { RoomListPage } from "./pages/RoomListPage";
 import { ResourceDetailPage } from "./pages/ResourceDetailPage";
 import { ReservationsPage } from "./pages/ReservationsPage";
 import { ReservationDetailPage } from "./pages/ReservationDetailPage";
@@ -73,7 +73,7 @@ function App() {
             path="/rooms"
             element={
               <ProtectedRoute>
-                <SallesListPage />
+                <RoomListPage />
               </ProtectedRoute>
             }
           />

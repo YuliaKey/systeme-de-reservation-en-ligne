@@ -2,7 +2,7 @@ export { HomePage } from "./HomePage";
 export { SignInPage } from "./SignInPage";
 export { SignUpPage } from "./SignUpPage";
 export { DashboardPage } from "./DashboardPage";
-export { SallesListPage } from "./SallesListPage";
+export { RoomListPage } from "./RoomListPage";
 export { ResourceDetailPage } from "./ResourceDetailPage";
 export { ReservationsPage } from "./ReservationsPage";
 export { ReservationDetailPage } from "./ReservationDetailPage";

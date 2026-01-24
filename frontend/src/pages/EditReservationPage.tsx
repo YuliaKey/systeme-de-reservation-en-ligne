@@ -20,19 +20,9 @@ const parseTimeValue = (value: string | number): number => {
   return parseFloat(value);
 };
 
-const isDbTimeRange = (
-  range: DbTimeRange | TimeRange,
-): range is DbTimeRange => {
-  return "start" in range && "end" in range;
-};
-
 const formatTimeRange = (range: DbTimeRange | TimeRange): string => {
-  const start = isDbTimeRange(range)
-    ? parseTimeValue(range.start)
-    : parseTimeValue(range.startTime);
-  const end = isDbTimeRange(range)
-    ? parseTimeValue(range.end)
-    : parseTimeValue(range.endTime);
+  const start = parseTimeValue(range.start);
+  const end = parseTimeValue(range.end);
 
   const formatHour = (hour: number) => {
     const h = Math.floor(hour);
@@ -48,42 +38,10 @@ const isWithinTimeRange = (
   endHour: number,
   range: DbTimeRange | TimeRange,
 ): boolean => {
-  const rangeStart = isDbTimeRange(range)
-    ? parseTimeValue(range.start)
-    : parseTimeValue(range.startTime);
-  const rangeEnd = isDbTimeRange(range)
-    ? parseTimeValue(range.end)
-    : parseTimeValue(range.endTime);
+  const rangeStart = parseTimeValue(range.start);
+  const rangeEnd = parseTimeValue(range.end);
 
   return startHour >= rangeStart && endHour <= rangeEnd;
-};
-
-const getMinDuration = (
-  rules:
-    | { minDurationMinutes?: number; maxDurationMinutes?: number }
-    | { minDuration?: number; maxDuration?: number },
-): number | undefined => {
-  if ("minDurationMinutes" in rules) {
-    return rules.minDurationMinutes;
-  }
-  if ("minDuration" in rules) {
-    return rules.minDuration;
-  }
-  return undefined;
-};
-
-const getMaxDuration = (
-  rules:
-    | { minDurationMinutes?: number; maxDurationMinutes?: number }
-    | { minDuration?: number; maxDuration?: number },
-): number | undefined => {
-  if ("maxDurationMinutes" in rules) {
-    return rules.maxDurationMinutes;
-  }
-  if ("maxDuration" in rules) {
-    return rules.maxDuration;
-  }
-  return undefined;
 };
 
 export function EditReservationPage() {
@@ -253,7 +211,7 @@ export function EditReservationPage() {
     updateMutation.mutate({
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
-      notes: notes || undefined,
+      notes: notes.trim() || undefined,
     });
   };
 
@@ -261,11 +219,22 @@ export function EditReservationPage() {
     return <Loading fullScreen />;
   }
 
-  if (reservationError || resourceError) {
+  if (reservationError) {
     return (
       <ErrorState
-        message="Impossible de charger les données"
-        onRetry={() => window.location.reload()}
+        message="Réservation introuvable"
+        details="Cette réservation n'existe pas ou vous n'y avez pas accès"
+        onRetry={() => navigate("/reservations")}
+      />
+    );
+  }
+
+  if (resourceError) {
+    return (
+      <ErrorState
+        message="Ressource introuvable"
+        details="La ressource associée à cette réservation n'existe plus"
+        onRetry={() => navigate("/reservations")}
       />
     );
   }
@@ -360,7 +329,7 @@ export function EditReservationPage() {
       {/* Resource Info */}
       <div className="bg-gray-50 rounded-lg p-6 mb-8">
         <h2 className="font-semibold text-gray-900 mb-4">
-          Informations sur la ressource
+          Informations sur la salle
         </h2>
         <div className="space-y-2 text-sm">
           <p>
@@ -400,31 +369,21 @@ export function EditReservationPage() {
                 </span>
               </p>
             )}
-          {(resource.rules || resource.availabilityRules) && (
+          {resource.availability && (
             <>
-              {getMinDuration(
-                resource.rules || resource.availabilityRules || {},
-              ) && (
+              {resource.availability.minDuration && (
                 <p>
                   <span className="text-gray-600">Durée minimale:</span>{" "}
                   <span className="font-medium">
-                    {getMinDuration(
-                      resource.rules || resource.availabilityRules || {},
-                    )}{" "}
-                    minutes
+                    {resource.availability.minDuration} minutes
                   </span>
                 </p>
               )}
-              {getMaxDuration(
-                resource.rules || resource.availabilityRules || {},
-              ) && (
+              {resource.availability.maxDuration && (
                 <p>
                   <span className="text-gray-600">Durée maximale:</span>{" "}
                   <span className="font-medium">
-                    {getMaxDuration(
-                      resource.rules || resource.availabilityRules || {},
-                    )}{" "}
-                    minutes
+                    {resource.availability.maxDuration} minutes
                   </span>
                 </p>
               )}
