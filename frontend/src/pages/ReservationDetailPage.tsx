@@ -44,6 +44,7 @@ export function ReservationDetailPage() {
     onSuccess: () => {
       toast.success("Réservation annulée avec succès");
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "statistics"] });
       navigate("/reservations");
     },
     onError: () => {

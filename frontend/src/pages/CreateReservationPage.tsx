@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Calendar, Clock, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { reservationsService, resourcesService } from "../services";
@@ -30,6 +30,7 @@ const isWithinTimeRange = (
 export function CreateReservationPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const resourceId = searchParams.get("resourceId");
 
   const [startDate, setStartDate] = useState("");
@@ -51,6 +52,9 @@ export function CreateReservationPage() {
       reservationsService.create(data),
     onSuccess: () => {
       toast.success("Réservation créée avec succès !");
+      // Invalider les caches pour mettre à jour les listes
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "statistics"] });
       navigate("/reservations");
     },
     onError: (error: any) => {

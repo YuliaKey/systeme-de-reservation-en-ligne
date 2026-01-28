@@ -113,18 +113,35 @@ export interface CheckAvailabilityResponse {
 }
 
 export interface AdminStatistics {
-  totalResources: number;
-  totalReservations: number;
-  totalUsers: number;
-  totalEmailsSent: number;
-  topResources: Array<{
-    resourceId: number;
+  resources: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  reservations: {
+    total: number;
+    active: number;
+    modified: number;
+    cancelled: number;
+    passed: number;
+  };
+  users: {
+    total: number;
+  };
+  emails: {
+    total: number;
+    sent: number;
+    failed: number;
+    pending: number;
+  };
+  topResourcesByReservations: Array<{
+    resourceId: string;
     resourceName: string;
     reservationCount: number;
   }>;
-  topUsers: Array<{
+  topUsersByReservations: Array<{
     userId: string;
-    email: string;
+    userName: string;
     reservationCount: number;
   }>;
 }

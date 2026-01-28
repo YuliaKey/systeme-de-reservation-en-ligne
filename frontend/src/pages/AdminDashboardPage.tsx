@@ -40,28 +40,28 @@ export function AdminDashboardPage() {
   const statCards = [
     {
       title: "Salles",
-      value: stats.totalResources,
+      value: stats.resources.total,
       icon: Package,
       color: "text-blue-600",
       bg: "bg-blue-100",
     },
     {
       title: "Réservations",
-      value: stats.totalReservations,
+      value: stats.reservations.total,
       icon: Calendar,
       color: "text-green-600",
       bg: "bg-green-100",
     },
     {
       title: "Utilisateurs",
-      value: stats.totalUsers,
+      value: stats.users.total,
       icon: Users,
       color: "text-purple-600",
       bg: "bg-purple-100",
     },
     {
       title: "Emails envoyés",
-      value: stats.totalEmailsSent,
+      value: stats.emails.sent,
       icon: Mail,
       color: "text-orange-600",
       bg: "bg-orange-100",
@@ -134,68 +134,70 @@ export function AdminDashboardPage() {
       </div>
 
       {/* Top rooms */}
-      {stats.topResources && stats.topResources.length > 0 && (
-        <div className="card mb-8">
-          <div className="flex items-center mb-4">
-            <TrendingUp className="h-5 w-5 text-primary-600 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Salles les plus réservées
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {stats.topResources.map((resource, index) => (
-              <div
-                key={resource.resourceId}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center">
-                  <span className="text-2xl font-bold text-gray-300 w-8">
-                    {index + 1}
-                  </span>
-                  <span className="text-gray-900 font-medium ml-3">
-                    {resource.resourceName}
+      {stats.topResourcesByReservations &&
+        stats.topResourcesByReservations.length > 0 && (
+          <div className="card mb-8">
+            <div className="flex items-center mb-4">
+              <TrendingUp className="h-5 w-5 text-primary-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Salles les plus réservées
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {stats.topResourcesByReservations.map((resource, index) => (
+                <div
+                  key={resource.resourceId}
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex items-center">
+                    <span className="text-2xl font-bold text-gray-300 w-8">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-900 font-medium ml-3">
+                      {resource.resourceName}
+                    </span>
+                  </div>
+                  <span className="badge badge-blue">
+                    {resource.reservationCount} réservation
+                    {resource.reservationCount > 1 ? "s" : ""}
                   </span>
                 </div>
-                <span className="badge badge-blue">
-                  {resource.reservationCount} réservation
-                  {resource.reservationCount > 1 ? "s" : ""}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Top users */}
-      {stats.topUsers && stats.topUsers.length > 0 && (
-        <div className="card">
-          <div className="flex items-center mb-4">
-            <Users className="h-5 w-5 text-primary-600 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              Utilisateurs les plus actifs
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {stats.topUsers.map((user, index) => (
-              <div
-                key={user.userId}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-              >
-                <div className="flex items-center">
-                  <span className="text-2xl font-bold text-gray-300 w-8">
-                    {index + 1}
+      {stats.topUsersByReservations &&
+        stats.topUsersByReservations.length > 0 && (
+          <div className="card">
+            <div className="flex items-center mb-4">
+              <Users className="h-5 w-5 text-primary-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">
+                Utilisateurs les plus actifs
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {stats.topUsersByReservations.map((user, index) => (
+                <div
+                  key={user.userId}
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex items-center">
+                    <span className="text-2xl font-bold text-gray-300 w-8">
+                      {index + 1}
+                    </span>
+                    <span className="text-gray-900 ml-3">{user.userName}</span>
+                  </div>
+                  <span className="badge badge-green">
+                    {user.reservationCount} réservation
+                    {user.reservationCount > 1 ? "s" : ""}
                   </span>
-                  <span className="text-gray-900 ml-3">{user.email}</span>
                 </div>
-                <span className="badge badge-green">
-                  {user.reservationCount} réservation
-                  {user.reservationCount > 1 ? "s" : ""}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
